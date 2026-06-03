@@ -2198,13 +2198,6 @@ with page_col:
 
             total_days = sum(float(entry["leave_days"]) for entry in leave_entries)
 
-            st.markdown(
-                f"<div style='font-size: 22px; font-weight: 700; margin-top: 16px; margin-bottom: 8px;'>{leave_type} - {month_label}</div>",
-                unsafe_allow_html=True
-            )
-
-            st.write(f"Total zile: {total_days:.2f}")
-
             for entry in leave_entries:
                 if admin_mode:
                     st.write(f"Angajat: {entry['employee_name']} ({entry['employee_username']})")
