@@ -1841,6 +1841,7 @@ else:
 
 page_left, page_col, page_right = st.columns([0.25, 2.5, 0.25])
 
+
 with page_col:
     with st.expander("Adauga intrare noua", expanded=False):
 
@@ -1851,16 +1852,31 @@ with page_col:
             accept_new_options=False
         )
 
-        with st.form(key=f"form_add_entry_{target_employee_id}_{entry_type}"):
-            entry_date = st.date_input(
-                "Data plecarii",
-                key="entry_date_input"
+        entry_date = st.date_input(
+            "Data plecarii",
+            key="entry_date_input"
+        )
+
+        hours = 0
+        leave_days = 0.0
+        end_date = None
+
+        if entry_type != "Invoire":
+            end_date = st.date_input(
+                "Data intoarcerii",
+                value=entry_date + timedelta(days=1),
+                key="leave_end_date_input"
             )
 
-            hours = 0
-            leave_days = 0.0
-            end_date = None
+            calculated_leave_days = count_business_days(entry_date, end_date)
 
+            st.info(
+                f"Zile de concediu calculate, fara weekend: {calculated_leave_days:.2f}"
+            )
+        else:
+            calculated_leave_days = 0.0
+
+        with st.form(key=f"form_add_entry_{target_employee_id}_{entry_type}"):
             if entry_type == "Invoire":
                 hours = st.number_input(
                     "Ore de recuperat",
@@ -1870,18 +1886,6 @@ with page_col:
                     key="hours_input"
                 )
             else:
-                end_date = st.date_input(
-                    "Data intoarcerii",
-                    value=entry_date + timedelta(days=1),
-                    key="leave_end_date_input"
-                )
-
-                calculated_leave_days = count_business_days(entry_date, end_date)
-
-                st.info(
-                    f"Zile de concediu calculate, fara weekend: {calculated_leave_days:.2f}"
-                )
-
                 manual_override = st.checkbox(
                     "Suprascrie manual zilele scazute",
                     key="manual_override_input"
