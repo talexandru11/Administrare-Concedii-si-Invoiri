@@ -532,30 +532,42 @@ def update_employee(employee_id, username, full_name, position, role):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
-        UPDATE employees
-        SET username = ?,
-            name = ?,
-            position = ?,
-            role = ?
-        WHERE id = ?
-          AND COALESCE(deleted, 0) = 0
-    """, (
-        username.strip().lower(),
-        full_name.strip(),
-        position,
-        role,
-        employee_id
-    ))
+    try:
+        cursor.execute("""
+            UPDATE employees
+            SET username = ?,
+                name = ?,
+                position = ?,
+                role = ?
+            WHERE id = ?
+              AND COALESCE(deleted, 0) = 0
+        """, (
+            username.strip().lower(),
+            full_name.strip(),
+            position,
+            role,
+            employee_id
+        ))
 
-    rows_updated = cursor.rowcount
+        rows_updated = cursor.rowcount
 
-    conn.commit()
-    conn.close()
+        conn.commit()
+        conn.close()
 
-    st.cache_data.clear()
+        st.cache_data.clear()
 
-    return rows_updated == 1
+        return True, rows_updated == 1
+
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+
+        error_text = str(e).lower()
+
+        if "unique" in error_text and "username" in error_text:
+            return False, "Există deja un utilizator cu acest username."
+
+        return False, f"Eroare la modificarea utilizatorului: {e}"
 
 
 def soft_delete_employee(employee_id):
@@ -1529,19 +1541,21 @@ if admin_mode:
             elif not edit_full_name.strip():
                 st.error("Numele complet este obligatoriu.")
             else:
-                updated = update_employee(
-                    selected_employee_id,
-                    edit_username,
-                    edit_full_name,
-                    edit_position,
-                    edit_role
-                )
+                success, result = update_employee(
+                selected_employee_id,
+                edit_username,
+                edit_full_name,
+                edit_position,
+                edit_role
+            )
 
-                if updated:
-                    st.success("Utilizatorul a fost modificat.")
-                    st.rerun()
-                else:
-                    st.error("Utilizatorul nu a fost găsit sau nu a putut fi modificat.")
+            if success and result:
+                st.success("Utilizatorul a fost modificat.")
+                st.rerun()
+            elif success and not result:
+                st.error("Utilizatorul nu a fost găsit sau nu a putut fi modificat.")
+            else:
+                st.error(result)
 
         st.markdown("")
 
@@ -1591,71 +1605,6 @@ if admin_mode:
             update_annual_leave_days(selected_employee_id, float(new_balance))
             st.success("Soldul a fost actualizat.")
             st.rerun()
-
-        st.markdown("#### Adaugă concediu")
-
-        admin_leave_type = st.selectbox(
-            "Tip concediu",
-            ["Concediu odihnă", "Concediu medical", "Concediu fără plată"],
-            key=f"admin_leave_type_{selected_employee_id}"
-        )
-
-        admin_start_date = st.date_input(
-            "Data început",
-            key=f"admin_start_date_{selected_employee_id}"
-        )
-
-        admin_end_date = st.date_input(
-            "Data întoarcerii",
-            value=admin_start_date + timedelta(days=1),
-            key=f"admin_end_date_{selected_employee_id}"
-        )
-
-        calculated_days = count_business_days(admin_start_date, admin_end_date)
-
-        admin_leave_days = st.number_input(
-            "Zile scăzute",
-            min_value=0.0,
-            max_value=31.0,
-            value=float(calculated_days),
-            step=0.25,
-            format="%.2f",
-            key=f"admin_leave_days_{selected_employee_id}_{admin_start_date}_{admin_end_date}"
-        )
-
-        admin_description = st.text_area(
-            "Observații",
-            key=f"admin_description_{selected_employee_id}"
-        )
-
-        if st.button("Adaugă concediul utilizatorului", use_container_width=True):
-            if admin_end_date <= admin_start_date:
-                st.error("Data întoarcerii trebuie să fie după data de început.")
-            else:
-                conflict, existing, existing_start, existing_end = has_conflicting_entry(
-                    selected_employee_id,
-                    admin_start_date,
-                    admin_end_date
-                )
-
-                if conflict:
-                    st.error(
-                        f"Interval invalid: se suprapune cu "
-                        f"{existing['entry_type']} {existing_start.strftime('%d.%m.%Y')} - "
-                        f"{existing_end.strftime('%d.%m.%Y')}."
-                    )
-                else:
-                    add_entry(
-                        selected_employee_id,
-                        admin_start_date,
-                        admin_end_date,
-                        admin_leave_type,
-                        0,
-                        float(admin_leave_days),
-                        admin_description
-                    )
-                    st.success("Concediul a fost adăugat.")
-                    st.rerun()
 
         st.markdown("#### Administrare concedii utilizator selectat")
 
@@ -1713,42 +1662,47 @@ if admin_mode:
         key="report_end_date"
     )
 
-if report_end_date >= report_start_date:
-    if st.sidebar.button("Generează raport general", use_container_width=True):
-        report_df = get_full_report_data(
-            report_start_date,
-            report_end_date
-        )
-
-        users_df = get_all_users_table()
-
-        if not report_df.empty:
-            output = BytesIO()
-
-            with pd.ExcelWriter(output, engine="openpyxl") as writer:
-                users_df.to_excel(
-                    writer,
-                    index=False,
-                    sheet_name="Utilizatori"
-                )
-
-                report_df.to_excel(
-                    writer,
-                    index=False,
-                    sheet_name="Raport interval"
-                )
-
-            st.sidebar.download_button(
-                label="Descarcă raport general",
-                data=output.getvalue(),
-                file_name=f"raport_general_{report_start_date}_{report_end_date}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True
+    if report_end_date >= report_start_date:
+        if st.sidebar.button(
+            "Generează raport general",
+            use_container_width=True,
+            key="btn_generate_general_report"
+        ):
+            report_df = get_full_report_data(
+                report_start_date,
+                report_end_date
             )
-        else:
-            st.sidebar.info("Nu există date pentru interval.")
-else:
-    st.sidebar.error("Interval invalid.")
+
+            users_df = get_all_users_table()
+
+            if not report_df.empty:
+                output = BytesIO()
+
+                with pd.ExcelWriter(output, engine="openpyxl") as writer:
+                    users_df.to_excel(
+                        writer,
+                        index=False,
+                        sheet_name="Utilizatori"
+                    )
+
+                    report_df.to_excel(
+                        writer,
+                        index=False,
+                        sheet_name="Raport interval"
+                    )
+
+                st.sidebar.download_button(
+                    label="Descarcă raport general",
+                    data=output.getvalue(),
+                    file_name=f"raport_general_{report_start_date}_{report_end_date}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True,
+                    key="download_general_report"
+                )
+            else:
+                st.sidebar.info("Nu există date pentru interval.")
+    else:
+        st.sidebar.error("Interval invalid.")
 
 # -----------------------------
 # ADD NEW ENTRY
