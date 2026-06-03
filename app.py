@@ -100,8 +100,12 @@ def update_user_pin(employee_id, new_pin):
         employee_id
     ))
 
+    rows_updated = cursor.rowcount
+
     conn.commit()
     conn.close()
+
+    return rows_updated == 1
 
 def has_overlapping_leave(employee_id, start_date, end_date, exclude_entry_id=None):
     """
@@ -1241,8 +1245,15 @@ with st.sidebar.expander("Schimbă PIN"):
         elif new_pin != confirm_new_pin:
             st.error("PIN-urile noi nu coincid.")
         else:
-            update_user_pin(employee_id, new_pin)
-            st.success("PIN-ul a fost schimbat.")
+            pin_updated = update_user_pin(employee_id, new_pin)
+
+            if not pin_updated:
+                st.error("PIN-ul nu a fost actualizat. ID-ul utilizatorului nu a fost găsit în baza de date.")
+                st.stop()
+
+            st.session_state.logged_username = ""
+            st.success("PIN-ul a fost schimbat. Autentifică-te din nou.")
+            st.rerun()
 
 if "user_created_message" not in st.session_state:
     st.session_state.user_created_message = ""

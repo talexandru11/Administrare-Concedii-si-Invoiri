@@ -1,3 +1,4 @@
 pandas
 streamlit
 openpyxl
+psycopg2-binary
