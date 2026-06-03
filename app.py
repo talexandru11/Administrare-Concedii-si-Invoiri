@@ -2017,10 +2017,22 @@ remaining_annual_days = annual_days - used_annual_days
 page_left, page_col, page_right = st.columns([0.25, 2.5, 0.25])
 
 with page_col:
-    st.markdown(
-        "<div style='font-size: 28px; font-weight: 700;'>Situatie angajat</div>",
-        unsafe_allow_html=True
-    )
+
+    balance = get_leave_balance(employee_id)
+    annual_days = float(balance["annual_leave_days"]) if balance else 21.0
+    used_annual_days = float(get_used_annual_leave_days(employee_id))
+    remaining_annual_days = annual_days - used_annual_days
+
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        st.metric("CO disponibile", f"{annual_days:.2f}")
+
+    with c2:
+        st.metric("CO folosite", f"{used_annual_days:.2f}")
+
+    with c3:
+        st.metric("CO ramase", f"{remaining_annual_days:.2f}")
 
     if admin_mode:
         entries = get_all_entries_for_admin()
