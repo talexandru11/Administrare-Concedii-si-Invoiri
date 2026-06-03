@@ -2100,9 +2100,7 @@ with page_col:
 
             st.subheader(month_label)
 
-            # -----------------------------
             # INVOIRI
-            # -----------------------------
 
             invoiri = sorted(
                 [
@@ -2193,9 +2191,8 @@ with page_col:
                     else:
                         st.empty()
 
-# -----------------------------
-# CONCEDII
-# -----------------------------
+            # CONCEDII
+
             concedii = sorted(
                     [
                         entry for entry in month_entries
@@ -2210,7 +2207,10 @@ with page_col:
                 )
 
             if invoiri and concedii:
-                st.divider()
+                inner_left, inner_mid, inner_right = st.columns([0.03, 0.94, 0.03])
+
+                with inner_mid:
+                    st.divider()
 
             if concedii:
                 st.markdown(
