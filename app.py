@@ -1575,7 +1575,7 @@ if admin_mode:
             use_container_width=True,
             hide_index=True,
             column_config={
-                "employee_id": st.column_config.NumberColumn("ID", width="small"),
+                "employee_id": None,
                 "username": st.column_config.TextColumn("Username", width="medium"),
                 "nume_complet": st.column_config.TextColumn("Nume complet", width="medium"),
                 "pozitie": st.column_config.TextColumn("Pozitie", width="medium"),
