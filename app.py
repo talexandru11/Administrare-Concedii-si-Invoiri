@@ -2196,8 +2196,6 @@ with page_col:
 # -----------------------------
 # CONCEDII
 # -----------------------------
-            st.divider
-
             concedii = sorted(
                     [
                         entry for entry in month_entries
@@ -2210,6 +2208,9 @@ with page_col:
                     key=lambda entry: entry["entry_date"],
                     reverse=True
                 )
+
+            if invoiri and concedii:
+                st.divider()
 
             if concedii:
                 st.markdown(
