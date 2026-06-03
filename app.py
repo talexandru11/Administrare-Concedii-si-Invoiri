@@ -1220,7 +1220,7 @@ if not st.session_state.logged_username:
 
         pin_input = st.text_input(
             "PIN",
-            placeholder="PIN",
+            placeholder="Password",
             type="password",
             label_visibility="collapsed",
             key="login_pin",
@@ -1259,10 +1259,13 @@ employee_name = current_user["name"]
 employee_position = current_user["position"]
 user_role = current_user["role"]
 
-st.subheader(employee_name)
+page_left, page_col, page_right = st.columns([0.25, 2.5, 0.25])
 
-if employee_position:
-    st.caption(employee_position)
+with page_col:
+    st.subheader(employee_name)
+
+    if employee_position:
+        st.caption(employee_position)
 
 st.sidebar.image("logo.png", use_container_width=True)
 
@@ -1352,20 +1355,20 @@ with st.sidebar.expander("Schimbă PIN"):
             current_user["pin_hash"],
             current_user["pin_salt"]
         ):
-            st.error("PIN-ul actual este greșit.")
+            st.error("Parola actuală este greșită.")
         elif not new_pin:
-            st.error("PIN-ul nou este obligatoriu.")
+            st.error("Parola nouă este obligatorie.")
         elif new_pin != confirm_new_pin:
-            st.error("PIN-urile noi nu coincid.")
+            st.error("Parolele noi nu coincid.")
         else:
             pin_updated = update_user_pin(employee_id, new_pin)
 
             if not pin_updated:
-                st.error("PIN-ul nu a fost actualizat. ID-ul utilizatorului nu a fost găsit în baza de date.")
+                st.error("Parola nu a fost actualizată. ID-ul utilizatorului nu a fost găsit în baza de date.")
                 st.stop()
 
             st.session_state.logged_username = ""
-            st.success("PIN-ul a fost schimbat. Autentifică-te din nou.")
+            st.success("Parola a fost schimbată. Autentifică-te din nou.")
             st.rerun()
 
 if "user_created_message" not in st.session_state:
@@ -1425,7 +1428,7 @@ if admin_mode:
             elif not new_full_name.strip():
                 st.error("Numele complet este obligatoriu.")
             elif not new_pin.strip():
-                st.error("PIN-ul inițial este obligatoriu.")
+                st.error("Parola inițială este obligatorie.")
             elif get_employee_by_username(new_username):
                 st.error("Există deja un utilizator cu acest username.")
             else:
