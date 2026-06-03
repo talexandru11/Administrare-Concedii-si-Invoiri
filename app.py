@@ -2019,8 +2019,8 @@ remaining_annual_days = annual_days - used_annual_days
 if admin_mode:
     page_left, page_col, page_right = st.columns([0.25, 2.5, 0.25])
 else:
-    page_left, page_col, page_right = st.columns([0.8, 2.4, 0.8])
-
+    page_left, page_col, page_right = st.columns([0.25, 2.5, 0.25])
+    
 with page_col:
     if not admin_mode:
         st.markdown("## Concediile mele")
@@ -2050,18 +2050,22 @@ with page_col:
                     f"{float(entry['leave_days']):.2f} zile**"
                 )
 
-                st.divider()
+        with st.expander("Adauga intrare noua", expanded=False):
+            # aici ramane codul tau de adaugare intrare
+            ...
 
-    c1, c2, c3 = st.columns(3)
+        st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
 
-    with c1:
-        st.metric("CO disponibile", f"{annual_days:.2f}")
+        c1, c2, c3 = st.columns(3)
 
-    with c2:
-        st.metric("CO folosite", f"{used_annual_days:.2f}")
+        with c1:
+            st.metric("CO disponibile", f"{annual_days:.2f}")
 
-    with c3:
-        st.metric("CO ramase", f"{remaining_annual_days:.2f}")
+        with c2:
+            st.metric("CO folosite", f"{used_annual_days:.2f}")
+
+        with c3:
+            st.metric("CO ramase", f"{remaining_annual_days:.2f}")
 
     st.divider()
 
