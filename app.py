@@ -1670,20 +1670,26 @@ if admin_mode:
 
         st.markdown("#### Sold CO")
 
-        new_balance = st.number_input(
-            "Total zile CO disponibile",
-            min_value=-365.0,
-            max_value=365.0,
-            value=float(selected_user_row["zile_co_disponibile"]),
-            step=0.25,
-            format="%.2f",
-            key=f"admin_balance_{selected_employee_id}"
-        )
+        with st.form(key=f"form_admin_balance_{selected_employee_id}"):
+            new_balance = st.number_input(
+                "Total zile CO disponibile",
+                min_value=-365.0,
+                max_value=365.0,
+                value=float(selected_user_row["zile_co_disponibile"]),
+                step=0.25,
+                format="%.2f",
+                key=f"admin_balance_{selected_employee_id}"
+            )
 
-        if st.button("Actualizează soldul utilizatorului", use_container_width=True):
-            update_annual_leave_days(selected_employee_id, float(new_balance))
-            st.success("Soldul a fost actualizat.")
-            st.rerun()
+            submitted_balance = st.form_submit_button(
+                "Actualizează soldul utilizatorului",
+                use_container_width=True
+            )
+
+            if submitted_balance:
+                update_annual_leave_days(selected_employee_id, float(new_balance))
+                st.success("Soldul a fost actualizat.")
+                st.rerun()
 
         st.markdown("#### Administrare concedii utilizator selectat")
 
