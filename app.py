@@ -2129,38 +2129,7 @@ with page_col:
                             st.success("Concediul a fost modificat.")
                             st.rerun()
 
-            st.divider()
-
-if admin_mode:
-    page_left, page_col, page_right = st.columns([0.25, 2.5, 0.25])
-
-    with page_col:
-        st.markdown(
-            "<div style='font-size: 28px; font-weight: 700;'>Admin - Sold utilizator curent</div>",
-            unsafe_allow_html=True
-        )
-
-        balance = get_leave_balance(employee_id)
-        current_annual_days = balance["annual_leave_days"] if balance else 21
-
-        new_annual_days = st.number_input(
-            "Total zile CO disponibile",
-            min_value=-365.0,
-            max_value=365.0,
-            value=float(current_annual_days),
-            step=0.25,
-            format="%.2f",
-            key=f"current_user_balance_{employee_id}"
-        )
-
-        if st.button(
-            "Actualizează sold CO",
-            use_container_width=True,
-            key=f"btn_update_current_user_balance_{employee_id}"
-        ):
-            update_annual_leave_days(employee_id, float(new_annual_days))
-            st.success("Soldul de concediu a fost actualizat.")
-            st.rerun()
+#            st.divider()
 
 # -----------------------------
 # EXPORT
