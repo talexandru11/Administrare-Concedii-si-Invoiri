@@ -2020,7 +2020,7 @@ if admin_mode:
     page_left, page_col, page_right = st.columns([0.25, 2.5, 0.25])
 else:
     page_left, page_col, page_right = st.columns([0.25, 2.5, 0.25])
-    
+
 with page_col:
     if not admin_mode:
         st.markdown("## Concediile mele")
@@ -2056,7 +2056,7 @@ with page_col:
 
         st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
 
-        c1, c2, c3 = st.columns(3)
+        c1, spacer1, c2, spacer2, c3 = st.columns([1, 1.1, 1, 1.1, 1])
 
         with c1:
             st.metric("CO disponibile", f"{annual_days:.2f}")
