@@ -2198,57 +2198,56 @@ with page_col:
 # CONCEDII
 # -----------------------------
 
-concedii = sorted(
-        [
-            entry for entry in month_entries
-            if entry["entry_type"] in [
-                "Concediu odihna",
-                "Concediu medical",
-                "Concediu fara plata"
-            ]
-        ],
-        key=lambda entry: entry["entry_date"],
-        reverse=True
-    )
+            concedii = sorted(
+                    [
+                        entry for entry in month_entries
+                        if entry["entry_type"] in [
+                            "Concediu odihna",
+                            "Concediu medical",
+                            "Concediu fara plata"
+                        ]
+                    ],
+                    key=lambda entry: entry["entry_date"],
+                    reverse=True
+                )
 
-if concedii:
-    st.markdown(
-        f"<div style='font-size: 22px; font-weight: 700; margin-top: 16px; margin-bottom: 8px;'>"
-        f"Concedii - {month_label}"
-        f"</div>",
-        unsafe_allow_html=True
-    )
+            if concedii:
+                st.markdown(
+                    f"<div style='font-size: 22px; font-weight: 700; margin-top: 16px; margin-bottom: 8px;'>"
+                    f"Concedii - {month_label}"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
 
-for entry in concedii:
-    start_date = datetime.fromisoformat(entry["entry_date"]).date()
-    end_date = get_leave_end_date(entry)
+            for entry in concedii:
+                start_date = datetime.fromisoformat(entry["entry_date"]).date()
+                end_date = get_leave_end_date(entry)
 
-    if admin_mode:
-        employee_text = f"{entry['employee_name']} ({entry['employee_username']})"
-    else:
-        employee_text = employee_name
+                if admin_mode:
+                    employee_text = f"{entry['employee_name']} ({entry['employee_username']})"
+                else:
+                    employee_text = employee_name
 
-    desc_text = f" — {entry['description']}" if entry["description"] else ""
+                desc_text = f" — {entry['description']}" if entry["description"] else ""
 
-    col_info, col_days = st.columns(
-        [4, 1],
-        vertical_alignment="center"
-    )
+                col_info, col_days = st.columns(
+                    [4, 1],
+                    vertical_alignment="center"
+                )
 
-    with col_info:
-        st.markdown(
-            f"**{employee_text}**  \n"
-            f"{entry['entry_type']} | "
-            f"{start_date.strftime('%d.%m.%Y')} - "
-            f"{end_date.strftime('%d.%m.%Y')}{desc_text}"
-        )
+                with col_info:
+                    st.markdown(
+                        f"**{employee_text}**  \n"
+                        f"{entry['entry_type']} | "
+                        f"{start_date.strftime('%d.%m.%Y')} - "
+                        f"{end_date.strftime('%d.%m.%Y')}{desc_text}"
+                    )
 
-    with col_days:
-        st.markdown(
-            f"**{float(entry['leave_days']):.2f} zile**"
-        )
-
-    st.divider()
+                with col_days:
+                    st.markdown(
+                        f"**{float(entry['leave_days']):.2f} zile**"
+                    )
+st.divider()
 
 
 
