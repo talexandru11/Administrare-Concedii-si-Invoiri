@@ -2193,10 +2193,10 @@ with page_col:
                     else:
                         st.empty()
 
-
 # -----------------------------
 # CONCEDII
 # -----------------------------
+            st.divider
 
             concedii = sorted(
                     [
