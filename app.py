@@ -1021,12 +1021,17 @@ st.markdown(
 )
 
 
-init_db()
+@st.cache_resource
+def init_db_once():
+    init_db()
+    return True
 
-if "TURSO_DATABASE_URL" in st.secrets:
-    st.sidebar.success("DB: Turso")
-else:
-    st.sidebar.error("DB: SQLite local / Turso lipsă")
+init_db_once()
+
+# if "TURSO_DATABASE_URL" in st.secrets:
+#     st.sidebar.success("DB: Turso")
+# else:
+#     st.sidebar.error("DB: SQLite local / Turso lipsă")
 
 try:
     locale.setlocale(locale.LC_TIME, "ro_RO.UTF-8")
