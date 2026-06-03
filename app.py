@@ -2248,8 +2248,10 @@ with page_col:
                     st.markdown(
                         f"**{float(entry['leave_days']):.2f} zile**"
                     )
-st.divider()
+page_left, page_col, page_right = st.columns([0.25, 2.5, 0.25])
 
+with page_col:
+    st.divider()
 
 
 st.sidebar.markdown("### Export")
