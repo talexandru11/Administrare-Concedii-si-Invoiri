@@ -451,7 +451,6 @@ def get_employee_by_username(username):
     employee = row_to_dict(cursor, row)
 
     conn.close()
-    st.cache_data.clear()
     return employee
 
 @st.cache_data(ttl=30)
@@ -492,8 +491,6 @@ def get_people_off_on_date(target_date):
 
     rows = rows_to_dicts(cursor, cursor.fetchall())
     conn.close()
-
-    st.cache_data.clear()
     return rows
 
 def create_employee(username, full_name, position, role, pin):
@@ -734,8 +731,6 @@ def get_entries_for_employee(employee_id):
 
     entries = rows_to_dicts(cursor, cursor.fetchall())
     conn.close()
-
-    st.cache_data.clear()
     return entries
 
 @st.cache_data(ttl=30)
@@ -757,8 +752,7 @@ def get_all_entries_for_admin():
 
     entries = rows_to_dicts(cursor, cursor.fetchall())
     conn.close()
-
-    st.cache_data.clear()
+ 
     return entries
 
 @st.cache_data(ttl=30)
@@ -775,8 +769,7 @@ def get_hours_for_entry(entry_id):
 
     hours = rows_to_dicts(cursor, cursor.fetchall())
     conn.close()
-
-    st.cache_data.clear()
+ 
     return hours
 
 
@@ -847,8 +840,7 @@ def get_leave_balance(employee_id):
     balance = row_to_dict(cursor, row)
 
     conn.close()
-
-    st.cache_data.clear()
+ 
     return balance
 
 
@@ -888,8 +880,7 @@ def get_leave_summary(employee_id):
 
     rows = rows_to_dicts(cursor, cursor.fetchall())
     conn.close()
-
-    st.cache_data.clear()
+ 
     return rows
 
 @st.cache_data(ttl=30)
@@ -907,8 +898,7 @@ def get_used_annual_leave_days(employee_id):
 
     used_days = float(cursor.fetchone()[0])
     conn.close()
-
-    st.cache_data.clear()
+ 
     return used_days
 
 
@@ -966,8 +956,7 @@ def get_export_data(employee_id):
     """, conn, params=(employee_id,))
 
     conn.close()
-
-    st.cache_data.clear()
+ 
     return df
 
 @st.cache_data(ttl=30)
@@ -1009,8 +998,7 @@ def get_all_users_table():
 """, conn)
 
     conn.close()
-
-    st.cache_data.clear()
+ 
 
     df["zile_co_disponibile"] = df["zile_co_disponibile"].astype(float)
     df["zile_co_folosite"] = df["zile_co_folosite"].astype(float)
@@ -1101,8 +1089,7 @@ def get_full_report_data(start_date, end_date):
     ))
 
     conn.close()
-
-    st.cache_data.clear()
+ 
     return df
 
 # -----------------------------
@@ -1125,6 +1112,17 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
+st.markdown("""
+<style>
+section[data-testid="stSidebar"] div[data-testid="stForm"] {
+    border: none !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+}
+</style>
+""", unsafe_allow_html=True)
 
 st.markdown(
     """
@@ -1493,10 +1491,6 @@ with st.sidebar.expander("Schimba Parola"):
 if "user_created_message" not in st.session_state:
     st.session_state.user_created_message = ""
 
-if admin_mode:
-    if st.session_state.user_created_message:
-        st.sidebar.success(st.session_state.user_created_message)
-
 if st.session_state.get("clear_new_user_fields", False):
     st.session_state.new_user_username = ""
     st.session_state.new_user_full_name = ""
@@ -1560,9 +1554,8 @@ if admin_mode:
                 )
 
                 if success:
-                    st.session_state.user_created_message = "Utilizatorul a fost creat."
+                    st.success("Utilizatorul a fost creat.")
                     st.session_state.clear_new_user_fields = True
-                    st.rerun()
                 else:
                     st.error(result)
 
@@ -1740,13 +1733,13 @@ if admin_mode:
                 start_date = datetime.fromisoformat(entry["entry_date"]).date()
                 end_date = get_leave_end_date(entry)
 
-                col1, col2 = st.columns([5, 1])
+                col1, col2 = st.columns([8, 1], vertical_alignment="center")
 
                 with col1:
-                    st.write(
-                        f"{entry['entry_type']} | "
+                    st.markdown(
+                        f"**{entry['entry_type']} | "
                         f"{start_date.strftime('%d.%m.%Y')} - {end_date.strftime('%d.%m.%Y')} | "
-                        f"{float(entry['leave_days']):.2f} zile"
+                        f"{float(entry['leave_days']):.2f} zile**"
                     )
 
                 with col2:
@@ -1754,6 +1747,8 @@ if admin_mode:
                         soft_delete_entry(entry["id"])
                         st.success("Concediul a fost sters.")
                         st.rerun()
+
+                st.divider()
 
 
 
