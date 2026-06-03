@@ -1744,8 +1744,14 @@ with page_col:
             col1, col2 = st.columns([8, 1], vertical_alignment="center")
 
             with col1:
+                if admin_mode:
+                    employee_label = f"{selected_user_row['nume_complet']} | "
+                else:
+                    employee_label = ""
+
                 st.markdown(
-                    f"**{entry['entry_type']} | "
+                    f"**{employee_label}"
+                    f"{entry['entry_type']} | "
                     f"{start_date.strftime('%d.%m.%Y')} - {end_date.strftime('%d.%m.%Y')} | "
                     f"{float(entry['leave_days']):.2f} zile**"
                 )
@@ -2066,10 +2072,6 @@ with page_col:
     st.divider()
 
     if admin_mode:
-        st.markdown(
-            "<div style='font-size: 28px; font-weight: 700;'>Situatie angajat</div>",
-            unsafe_allow_html=True
-        )
 
         entries = get_all_entries_for_admin()
     else:
