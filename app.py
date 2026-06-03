@@ -2206,11 +2206,11 @@ with page_col:
                     reverse=True
                 )
 
-            if invoiri and concedii:
-                inner_left, inner_mid, inner_right = st.columns([0.03, 0.94, 0.03])
+            # if invoiri and concedii:
+            #     inner_left, inner_mid, inner_right = st.columns([0.03, 0.94, 0.03])
 
-                with inner_mid:
-                    st.divider()
+            #     with inner_mid:
+            #         st.divider()
 
             if concedii:
                 st.markdown(
