@@ -1458,7 +1458,7 @@ def logout_employee():
     st.session_state.logged_username = ""
 
 st.sidebar.button(
-    "Schimbă utilizatorul",
+    "Deconectare",
     on_click=logout_employee,
     use_container_width=True
 )
