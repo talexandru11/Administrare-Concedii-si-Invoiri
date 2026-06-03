@@ -2100,84 +2100,89 @@ with page_col:
         # -----------------------------
 
         invoiri = [
-            entry for entry in month_entries
-            if entry["entry_type"] == "Invoire"
-        ]
+    entry for entry in month_entries
+    if entry["entry_type"] == "Invoire"
+]
 
-        if invoiri:
-            st.markdown(
-                f"<div style='font-size: 22px; font-weight: 700; margin-top: 16px; margin-bottom: 8px;'>Invoire - {month_label}</div>",
-                unsafe_allow_html=True
-            )
+if invoiri:
+    st.markdown(
+        f"<div style='font-size: 22px; font-weight: 700; margin-top: 16px; margin-bottom: 8px;'>"
+        f"Invoiri - {month_label}"
+        f"</div>",
+        unsafe_allow_html=True
+    )
 
-        for entry in invoiri:
-            if admin_mode:
-                st.write(f"Angajat: {entry['employee_name']} ({entry['employee_username']})")
+for entry in invoiri:
+    recovery_hours = get_hours_for_entry(entry["id"])
 
-            st.write(f"Data plecarii: {entry['entry_date']}")
+    recovered_hours = [h for h in recovery_hours if h["is_recovered"] == 1]
+    unrecovered_hours = [h for h in recovery_hours if h["is_recovered"] == 0]
 
-            st.write(f"Ore de recuperat: {entry['hours']}")
+    recovered_count = len(recovered_hours)
+    total_count = len(recovery_hours)
 
-            if entry["description"]:
-                st.write(f"Observatii: {entry['description']}")
+    entry_date_display = datetime.fromisoformat(entry["entry_date"]).date()
+    entry_date_label = entry_date_display.strftime("%d.%m.%Y")
 
-            recovery_hours = get_hours_for_entry(entry["id"])
+    if admin_mode:
+        employee_text = f"{entry['employee_name']} ({entry['employee_username']})"
+    else:
+        employee_text = employee_name
 
-            entry_date_display = datetime.fromisoformat(entry["entry_date"]).date()
-            entry_date_label = entry_date_display.strftime("%d.%m.%Y")
+    col_info, col_minus, col_status, col_plus, col_delete = st.columns(
+        [2.8, 0.7, 3.5, 0.7, 0.9],
+        vertical_alignment="center"
+    )
 
-            recovered_hours = [h for h in recovery_hours if h["is_recovered"] == 1]
-            unrecovered_hours = [h for h in recovery_hours if h["is_recovered"] == 0]
+    with col_info:
+        desc_text = f" — {entry['description']}" if entry["description"] else ""
 
-            recovered_count = len(recovered_hours)
-            total_count = len(recovery_hours)
+        st.markdown(
+            f"**{employee_text}**  \n"
+            f"{entry_date_label} | {entry['hours']} ore{desc_text}"
+        )
 
-            col_minus, col_display, col_plus = st.columns([0.7, 5, 0.7])
+    with col_minus:
+        if st.button(
+            "-",
+            key=f"minus_recovery_{entry['id']}",
+            disabled=(recovered_count == 0),
+            use_container_width=True
+        ):
+            last_recovered_hour = recovered_hours[-1]
+            unmark_hour_recovered(last_recovered_hour["id"])
+            st.rerun()
 
-            with col_minus:
-                st.write("")
-                if st.button(
-                    "−",
-                    key=f"minus_recovery_{entry['id']}",
-                    disabled=(recovered_count == 0),
-                    use_container_width=True
-                ):
-                    last_recovered_hour = recovered_hours[-1]
-                    unmark_hour_recovered(last_recovered_hour["id"])
-                    st.rerun()
+    with col_status:
+        if recovered_count == total_count:
+            st.success(f"{entry_date_label} - {recovered_count}/{total_count} recuperate")
+        elif recovered_count == 0:
+            st.warning(f"{entry_date_label} - {recovered_count}/{total_count} recuperate")
+        else:
+            st.info(f"{entry_date_label} - {recovered_count}/{total_count} recuperate")
 
-            with col_display:
-                if recovered_count == total_count:
-                    st.success(
-                        f"{entry_date_label} - {recovered_count}/{total_count} recuperate"
-                    )
-                elif recovered_count == 0:
-                    st.warning(
-                        f"{entry_date_label} - {recovered_count}/{total_count} recuperate"
-                    )
-                else:
-                    st.info(
-                        f"{entry_date_label} - {recovered_count}/{total_count} recuperate"
-                    )
+    with col_plus:
+        if st.button(
+            "+",
+            key=f"plus_recovery_{entry['id']}",
+            disabled=(recovered_count == total_count),
+            use_container_width=True
+        ):
+            next_unrecovered_hour = unrecovered_hours[0]
+            mark_hour_recovered(next_unrecovered_hour["id"])
+            st.rerun()
 
-            with col_plus:
-                st.write("")
-                if st.button(
-                    "+",
-                    key=f"plus_recovery_{entry['id']}",
-                    disabled=(recovered_count == total_count),
-                    use_container_width=True
-                ):
-                    next_unrecovered_hour = unrecovered_hours[0]
-                    mark_hour_recovered(next_unrecovered_hour["id"])
-                    st.rerun()
+    with col_delete:
+        if admin_mode:
+            if st.button(
+                "sterge",
+                key=f"delete_Invoire_{entry['id']}",
+                use_container_width=True
+            ):
+                soft_delete_entry(entry["id"])
+                st.rerun()
 
-            if admin_mode:
-                if st.button("Sterge Invoirea", key=f"delete_Invoire_{entry['id']}"):
-                    soft_delete_entry(entry["id"])
-                    st.rerun()
-
-            st.divider()
+    st.divider()
 
         # -----------------------------
         # CONCEDII GRUPATE PE TIP
