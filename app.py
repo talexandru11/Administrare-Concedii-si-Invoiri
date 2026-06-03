@@ -173,7 +173,6 @@ def get_entry_interval(entry):
 
 def has_conflicting_entry(employee_id, new_start, new_end, exclude_entry_id=None):
     conn = get_connection()
-    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
     if exclude_entry_id is None:
@@ -192,10 +191,8 @@ def has_conflicting_entry(employee_id, new_start, new_end, exclude_entry_id=None
               AND id != ?
         """, (employee_id, exclude_entry_id))
 
-    existing_entries = cursor.fetchall()
+    existing_entries = rows_to_dicts(cursor, cursor.fetchall())
     conn.close()
-
-    st.cache_data.clear()
 
     for existing in existing_entries:
         existing_start, existing_end = get_entry_interval(existing)
@@ -260,13 +257,14 @@ def init_db():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS employees (
-            id INTEGER PRIMARY KEY ,
+            id INTEGER PRIMARY KEY,
             username TEXT UNIQUE,
             name TEXT NOT NULL,
             position TEXT,
             role TEXT DEFAULT 'employee',
             pin_hash TEXT,
-            pin_salt TEXT
+            pin_salt TEXT,
+            deleted INTEGER DEFAULT 0
         )
     """)
 
@@ -291,6 +289,8 @@ def init_db():
     if "pin_salt" not in employee_columns:
         cursor.execute("ALTER TABLE employees ADD COLUMN pin_salt TEXT")
 
+    if "deleted" not in employee_columns:
+        cursor.execute("ALTER TABLE employees ADD COLUMN deleted INTEGER DEFAULT 0")
       
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS entries (
@@ -431,13 +431,13 @@ def get_employee_by_username(username):
         SELECT *
         FROM employees
         WHERE lower(username) = lower(?)
+            AND COALESCE(deleted, 0) = 0
     """, (username.strip(),))
 
     row = cursor.fetchone()
     employee = row_to_dict(cursor, row)
 
     conn.close()
-
     st.cache_data.clear()
     return employee
 
@@ -514,6 +514,56 @@ def create_employee(username, full_name, position, role, pin):
     conn.close()
 
     st.cache_data.clear()
+
+def update_employee(employee_id, username, full_name, position, role):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE employees
+        SET username = ?,
+            name = ?,
+            position = ?,
+            role = ?
+        WHERE id = ?
+          AND COALESCE(deleted, 0) = 0
+    """, (
+        username.strip().lower(),
+        full_name.strip(),
+        position,
+        role,
+        employee_id
+    ))
+
+    rows_updated = cursor.rowcount
+
+    conn.commit()
+    conn.close()
+
+    st.cache_data.clear()
+
+    return rows_updated == 1
+
+
+def soft_delete_employee(employee_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE employees
+        SET deleted = 1
+        WHERE id = ?
+    """, (employee_id,))
+
+    rows_updated = cursor.rowcount
+
+    conn.commit()
+    conn.close()
+
+    st.cache_data.clear()
+
+    return rows_updated == 1
+
 
 def add_entry(employee_id, entry_date, end_date, entry_type, hours, leave_days, description):
     conn = get_connection()
@@ -821,37 +871,38 @@ def get_all_users_table():
     conn = get_connection()
 
     df = pd.read_sql_query("""
-        SELECT
-            emp.id AS employee_id,
-            emp.username,
-            emp.name AS nume_complet,
-            emp.position AS pozitie,
-            emp.role AS rol,
+    SELECT
+        emp.id AS employee_id,
+        emp.username,
+        emp.name AS nume_complet,
+        emp.position AS pozitie,
+        emp.role AS rol,
 
-            COALESCE(lb.annual_leave_days, 21.0) AS zile_co_disponibile,
+        COALESCE(lb.annual_leave_days, 21.0) AS zile_co_disponibile,
 
+        COALESCE(used.used_days, 0.0)
+        + COALESCE(lb.manual_used_adjustment, 0.0) AS zile_co_folosite,
+
+        COALESCE(lb.annual_leave_days, 21.0)
+        - (
             COALESCE(used.used_days, 0.0)
-            + COALESCE(lb.manual_used_adjustment, 0.0) AS zile_co_folosite,
+            + COALESCE(lb.manual_used_adjustment, 0.0)
+          ) AS zile_co_ramase
 
-            COALESCE(lb.annual_leave_days, 21.0)
-            - (
-                COALESCE(used.used_days, 0.0)
-                + COALESCE(lb.manual_used_adjustment, 0.0)
-              ) AS zile_co_ramase
-
-        FROM employees emp
-        LEFT JOIN leave_balances lb ON lb.employee_id = emp.id
-        LEFT JOIN (
-            SELECT
-                employee_id,
-                SUM(leave_days) AS used_days
-            FROM entries
-            WHERE deleted = 0
-              AND entry_type = 'Concediu odihnă'
-            GROUP BY employee_id
-        ) used ON used.employee_id = emp.id
-        ORDER BY emp.name
-    """, conn)
+    FROM employees emp
+    LEFT JOIN leave_balances lb ON lb.employee_id = emp.id
+    LEFT JOIN (
+        SELECT
+            employee_id,
+            SUM(leave_days) AS used_days
+        FROM entries
+        WHERE deleted = 0
+          AND entry_type = 'Concediu odihnă'
+        GROUP BY employee_id
+    ) used ON used.employee_id = emp.id
+    WHERE COALESCE(emp.deleted, 0) = 0
+    ORDER BY emp.name
+""", conn)
 
     conn.close()
 
@@ -1311,6 +1362,12 @@ if admin_mode:
     if st.session_state.user_created_message:
         st.sidebar.success(st.session_state.user_created_message)
 
+if st.session_state.get("clear_new_user_fields", False):
+    st.session_state.new_user_username = ""
+    st.session_state.new_user_full_name = ""
+    st.session_state.new_user_pin = ""
+    st.session_state.clear_new_user_fields = False
+
     with st.sidebar.expander("Adaugă utilizator nou"):
         new_username = st.text_input(
             "Username",
@@ -1361,7 +1418,9 @@ if admin_mode:
                     new_role,
                     new_pin
                 )
+
                 st.session_state.user_created_message = "Utilizatorul a fost creat."
+                st.session_state.clear_new_user_fields = True
                 st.rerun()
 
 if admin_mode:
@@ -1398,6 +1457,90 @@ if admin_mode:
 
     selected_user_row = users_df[users_df["nume_complet"] == selected_user_label].iloc[0]
     selected_employee_id = int(selected_user_row["employee_id"])
+
+    st.markdown("#### Editează utilizator")
+
+edit_username = st.text_input(
+    "Username utilizator",
+    value=str(selected_user_row["username"]),
+    key=f"edit_username_{selected_employee_id}",
+    autocomplete="off"
+)
+
+edit_full_name = st.text_input(
+    "Nume complet utilizator",
+    value=str(selected_user_row["nume_complet"]),
+    key=f"edit_full_name_{selected_employee_id}",
+    autocomplete="off"
+)
+
+current_position = selected_user_row["pozitie"]
+
+if current_position in POSITION_OPTIONS:
+    position_index = POSITION_OPTIONS.index(current_position)
+else:
+    position_index = 0
+
+edit_position = st.selectbox(
+    "Poziție utilizator",
+    POSITION_OPTIONS,
+    index=position_index,
+    key=f"edit_position_{selected_employee_id}"
+)
+
+if edit_position in ["Project Manager", "HR Admin"]:
+    edit_role = "Admin"
+else:
+    edit_role = "Employee"
+
+col_edit, col_delete = st.columns(2)
+
+with col_edit:
+    if st.button("Salvează modificările utilizatorului", use_container_width=True):
+        if not edit_username.strip():
+            st.error("Username obligatoriu.")
+        elif not edit_full_name.strip():
+            st.error("Numele complet este obligatoriu.")
+        else:
+            updated = update_employee(
+                selected_employee_id,
+                edit_username,
+                edit_full_name,
+                edit_position,
+                edit_role
+            )
+
+            if updated:
+                st.success("Utilizatorul a fost modificat.")
+                st.rerun()
+            else:
+                st.error("Utilizatorul nu a fost găsit sau nu a putut fi modificat.")
+
+with col_delete:
+    if selected_employee_id == employee_id:
+        st.button(
+            "Șterge utilizatorul",
+            disabled=True,
+            use_container_width=True,
+            help="Nu poți șterge utilizatorul cu care ești logat."
+        )
+    else:
+        confirm_delete_user = st.checkbox(
+            "Confirm ștergerea utilizatorului",
+            key=f"confirm_delete_user_{selected_employee_id}"
+        )
+
+        if st.button("Șterge utilizatorul", use_container_width=True):
+            if not confirm_delete_user:
+                st.error("Bifează confirmarea înainte de ștergere.")
+            else:
+                deleted = soft_delete_employee(selected_employee_id)
+
+                if deleted:
+                    st.success("Utilizatorul a fost șters.")
+                    st.rerun()
+                else:
+                    st.error("Utilizatorul nu a fost găsit sau nu a putut fi șters.")
 
     st.markdown("#### Sold CO")
 
