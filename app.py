@@ -1375,66 +1375,66 @@ if admin_mode:
     if st.session_state.user_created_message:
         st.sidebar.success(st.session_state.user_created_message)
 
-if st.session_state.get("clear_new_user_fields", False):
-    st.session_state.new_user_username = ""
-    st.session_state.new_user_full_name = ""
-    st.session_state.new_user_pin = ""
-    st.session_state.clear_new_user_fields = False
+    if st.session_state.get("clear_new_user_fields", False):
+        st.session_state.new_user_username = ""
+        st.session_state.new_user_full_name = ""
+        st.session_state.new_user_pin = ""
+        st.session_state.clear_new_user_fields = False
 
-    with st.sidebar.expander("Adaugă utilizator nou"):
-        new_username = st.text_input(
-            "Username",
-            key="new_user_username",
-            autocomplete="off"
-        )
+        with st.sidebar.expander("Adaugă utilizator nou"):
+            new_username = st.text_input(
+                "Username",
+                key="new_user_username",
+                autocomplete="off"
+            )
 
-        new_full_name = st.text_input(
-            "Nume complet",
-            key="new_user_full_name",
-            autocomplete="off"
-        )
+            new_full_name = st.text_input(
+                "Nume complet",
+                key="new_user_full_name",
+                autocomplete="off"
+            )
 
-        new_position = st.selectbox(
-            "Poziție",
-            POSITION_OPTIONS,
-            key="new_user_position"
-        )
+            new_position = st.selectbox(
+                "Poziție",
+                POSITION_OPTIONS,
+                key="new_user_position"
+            )
 
-        new_pin = st.text_input(
-            "PIN inițial",
-            type="password",
-            key="new_user_pin",
-            autocomplete="off"
-        )
+            new_pin = st.text_input(
+                "PIN inițial",
+                type="password",
+                key="new_user_pin",
+                autocomplete="off"
+            )
 
-        if new_position in ["Project Manager", "HR Admin"]:
-            new_role = "Admin"
-        else:
-            new_role = "Employee"
-
-        if st.button("Creează utilizator", use_container_width=True):
-            st.session_state.user_created_message = ""
-
-            if not new_username.strip():
-                st.error("Username obligatoriu.")
-            elif not new_full_name.strip():
-                st.error("Numele complet este obligatoriu.")
-            elif not new_pin.strip():
-                st.error("PIN-ul inițial este obligatoriu.")
-            elif get_employee_by_username(new_username):
-                st.error("Există deja un utilizator cu acest username.")
+            if new_position in ["Project Manager", "HR Admin"]:
+                new_role = "Admin"
             else:
-                create_employee(
-                    new_username,
-                    new_full_name,
-                    new_position,
-                    new_role,
-                    new_pin
-                )
+                new_role = "Employee"
 
-                st.session_state.user_created_message = "Utilizatorul a fost creat."
-                st.session_state.clear_new_user_fields = True
-                st.rerun()
+            if st.button("Creează utilizator", use_container_width=True):
+                st.session_state.user_created_message = ""
+
+                if not new_username.strip():
+                    st.error("Username obligatoriu.")
+                elif not new_full_name.strip():
+                    st.error("Numele complet este obligatoriu.")
+                elif not new_pin.strip():
+                    st.error("PIN-ul inițial este obligatoriu.")
+                elif get_employee_by_username(new_username):
+                    st.error("Există deja un utilizator cu acest username.")
+                else:
+                    create_employee(
+                        new_username,
+                        new_full_name,
+                        new_position,
+                        new_role,
+                        new_pin
+                    )
+
+                    st.session_state.user_created_message = "Utilizatorul a fost creat."
+                    st.session_state.clear_new_user_fields = True
+                    st.rerun()
 
 if admin_mode:
     st.markdown(
