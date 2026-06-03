@@ -2050,10 +2050,6 @@ with page_col:
                     f"{float(entry['leave_days']):.2f} zile**"
                 )
 
-        with st.expander("Adauga intrare noua", expanded=False):
-            # aici ramane codul tau de adaugare intrare
-            ...
-
         st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
 
         c1, spacer1, c2, spacer2, c3 = st.columns([1, 4, 1, 4, 1])
