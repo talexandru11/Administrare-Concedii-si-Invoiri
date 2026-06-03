@@ -1841,10 +1841,8 @@ else:
 
 page_left, page_col, page_right = st.columns([0.25, 2.5, 0.25])
 
-
 with page_col:
     with st.expander("Adauga intrare noua", expanded=False):
-
         entry_type = st.selectbox(
             "Tip intrare",
             ["Invoire", "Concediu odihna", "Concediu medical", "Concediu fara plata"],
@@ -1861,7 +1859,15 @@ with page_col:
         leave_days = 0.0
         end_date = None
 
-        if entry_type != "Invoire":
+        if entry_type == "Invoire":
+            hours = st.number_input(
+                "Ore de recuperat",
+                min_value=1,
+                max_value=12,
+                step=1,
+                key="hours_input"
+            )
+        else:
             end_date = st.date_input(
                 "Data intoarcerii",
                 value=entry_date + timedelta(days=1),
@@ -1873,48 +1879,34 @@ with page_col:
             st.info(
                 f"Zile de concediu calculate, fara weekend: {calculated_leave_days:.2f}"
             )
-        else:
-            calculated_leave_days = 0.0
 
-        with st.form(key=f"form_add_entry_{target_employee_id}_{entry_type}"):
-            if entry_type == "Invoire":
-                hours = st.number_input(
-                    "Ore de recuperat",
-                    min_value=1,
-                    max_value=12,
-                    step=1,
-                    key="hours_input"
+            manual_override = st.checkbox(
+                "Suprascrie manual zilele scazute",
+                key="manual_override_input"
+            )
+
+            if manual_override:
+                leave_days = st.number_input(
+                    "Zile de concediu scazute manual",
+                    min_value=0.0,
+                    max_value=31.0,
+                    value=float(calculated_leave_days),
+                    step=0.25,
+                    format="%.2f",
+                    key=f"leave_days_manual_{entry_date}_{end_date}"
                 )
             else:
-                manual_override = st.checkbox(
-                    "Suprascrie manual zilele scazute",
-                    key="manual_override_input"
-                )
+                leave_days = float(calculated_leave_days)
 
-                if manual_override:
-                    leave_days = st.number_input(
-                        "Zile de concediu scazute manual",
-                        min_value=0.0,
-                        max_value=31.0,
-                        value=float(calculated_leave_days),
-                        step=0.25,
-                        format="%.2f",
-                        key=f"leave_days_manual_{entry_date}_{end_date}"
-                    )
-                else:
-                    leave_days = float(calculated_leave_days)
+        description = st.text_area(
+            "Observatii",
+            key="description_input"
+        )
 
-            description = st.text_area(
-                "Observatii",
-                key="description_input"
-            )
+        if "confirm_overdraw" not in st.session_state:
+            st.session_state.confirm_overdraw = False
 
-            submitted_entry = st.form_submit_button(
-                "Salveaza intrarea",
-                use_container_width=True
-            )
-
-        if submitted_entry:
+        if st.button("Salveaza intrarea", key="save_entry_button"):
             overdraw = False
 
             if entry_type == "Invoire":
@@ -1922,7 +1914,7 @@ with page_col:
                 new_end = entry_date + timedelta(days=1)
             else:
                 if end_date <= entry_date:
-                    st.error("Data Intoarcerii trebuie sa fie dupa data de Inceput.")
+                    st.error("Data intoarcerii trebuie sa fie dupa data de inceput.")
                     st.stop()
 
                 new_start = entry_date
@@ -1980,7 +1972,7 @@ with page_col:
             pending = st.session_state.pending_entry
 
             st.warning(
-                f"Atentie: Incerci sa iei {pending['leave_days']:.2f} zile CO, "
+                f"Atentie: incerci sa iei {pending['leave_days']:.2f} zile CO, "
                 f"dar mai ai disponibile doar {pending['remaining_days']:.2f}. "
                 f"Daca salvezi, vei ajunge la "
                 f"{pending['remaining_days'] - pending['leave_days']:.2f} zile."
