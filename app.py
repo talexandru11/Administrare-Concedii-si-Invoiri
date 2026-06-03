@@ -1461,7 +1461,7 @@ if admin_mode:
 
     with page_col:
         st.markdown(
-            "<div style='font-size: 28px; font-weight: 700; margin-top: 24px;'>Admin - Utilizatori</div>",
+            "<div style='font-size: 28px; font-weight: 700; margin-top: 24px;'>Utilizatori</div>",
             unsafe_allow_html=True
         )
 
@@ -1483,8 +1483,6 @@ if admin_mode:
             }
         )
 
-        st.markdown("### Admin - modifică concedii utilizator")
-
         selected_user_label = st.selectbox(
             "Alege utilizator",
             users_df["nume_complet"].tolist(),
@@ -1494,7 +1492,7 @@ if admin_mode:
         selected_user_row = users_df[users_df["nume_complet"] == selected_user_label].iloc[0]
         selected_employee_id = int(selected_user_row["employee_id"])
 
-        st.markdown("#### Editează utilizator")
+    with st.expander("Administrare cont utilizator selectat", expanded=False):
 
         edit_username = st.text_input(
             "Username utilizator",
@@ -1589,53 +1587,53 @@ if admin_mode:
                     else:
                         st.error("Utilizatorul nu a fost găsit sau nu a putut fi șters.")
 
-        st.markdown("#### Sold CO")
+    st.markdown("#### Sold CO")
 
-        new_balance = st.number_input(
-            "Total zile CO disponibile",
-            min_value=-365.0,
-            max_value=365.0,
-            value=float(selected_user_row["zile_co_disponibile"]),
-            step=0.25,
-            format="%.2f",
-            key=f"admin_balance_{selected_employee_id}"
-        )
+    new_balance = st.number_input(
+        "Total zile CO disponibile",
+        min_value=-365.0,
+        max_value=365.0,
+        value=float(selected_user_row["zile_co_disponibile"]),
+        step=0.25,
+        format="%.2f",
+        key=f"admin_balance_{selected_employee_id}"
+    )
 
-        if st.button("Actualizează soldul utilizatorului", use_container_width=True):
-            update_annual_leave_days(selected_employee_id, float(new_balance))
-            st.success("Soldul a fost actualizat.")
-            st.rerun()
+    if st.button("Actualizează soldul utilizatorului", use_container_width=True):
+        update_annual_leave_days(selected_employee_id, float(new_balance))
+        st.success("Soldul a fost actualizat.")
+        st.rerun()
 
-        st.markdown("#### Administrare concedii utilizator selectat")
+    st.markdown("#### Administrare concedii utilizator selectat")
 
-        selected_entries = get_entries_for_employee(selected_employee_id)
+    selected_entries = get_entries_for_employee(selected_employee_id)
 
-        selected_leave_entries = [
-            entry for entry in selected_entries
-            if entry["entry_type"] in ["Concediu odihnă", "Concediu medical", "Concediu fără plată"]
-        ]
+    selected_leave_entries = [
+        entry for entry in selected_entries
+        if entry["entry_type"] in ["Concediu odihnă", "Concediu medical", "Concediu fără plată"]
+    ]
 
-        if not selected_leave_entries:
-            st.info("Utilizatorul nu are concedii înregistrate.")
-        else:
-            for entry in selected_leave_entries:
-                start_date = datetime.fromisoformat(entry["entry_date"]).date()
-                end_date = get_leave_end_date(entry)
+    if not selected_leave_entries:
+        st.info("Utilizatorul nu are concedii înregistrate.")
+    else:
+        for entry in selected_leave_entries:
+            start_date = datetime.fromisoformat(entry["entry_date"]).date()
+            end_date = get_leave_end_date(entry)
 
-                col1, col2 = st.columns([5, 1])
+            col1, col2 = st.columns([5, 1])
 
-                with col1:
-                    st.write(
-                        f"{entry['entry_type']} | "
-                        f"{start_date.strftime('%d.%m.%Y')} - {end_date.strftime('%d.%m.%Y')} | "
-                        f"{float(entry['leave_days']):.2f} zile"
-                    )
+            with col1:
+                st.write(
+                    f"{entry['entry_type']} | "
+                    f"{start_date.strftime('%d.%m.%Y')} - {end_date.strftime('%d.%m.%Y')} | "
+                    f"{float(entry['leave_days']):.2f} zile"
+                )
 
-                with col2:
-                    if st.button("Șterge", key=f"admin_delete_leave_{entry['id']}"):
-                        soft_delete_entry(entry["id"])
-                        st.success("Concediul a fost șters.")
-                        st.rerun()
+            with col2:
+                if st.button("Șterge", key=f"admin_delete_leave_{entry['id']}"):
+                    soft_delete_entry(entry["id"])
+                    st.success("Concediul a fost șters.")
+                    st.rerun()
 
 
 
