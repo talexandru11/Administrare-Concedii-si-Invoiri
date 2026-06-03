@@ -500,21 +500,100 @@ def create_employee(username, full_name, position, role, pin):
     conn = get_connection()
     cursor = conn.cursor()
 
-    pin_hash, pin_salt = hash_pin(pin)
+    clean_username = username.strip().lower()
+    clean_full_name = full_name.strip()
 
-    cursor.execute("""
-        INSERT INTO employees (
-            username, name, position, role, pin_hash, pin_salt
-        )
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (
-        username.strip().lower(),
-        full_name.strip(),
-        position,
-        role,
-        pin_hash,
-        pin_salt
-    ))
+    try:
+        # Verifică dacă username-ul există deja, inclusiv soft-deleted
+        cursor.execute("""
+            SELECT id, COALESCE(deleted, 0)
+            FROM employees
+            WHERE lower(username) = lower(?)
+        """, (clean_username,))
+
+        existing_user = cursor.fetchone()
+
+        pin_hash, pin_salt = hash_pin(pin)
+
+        if existing_user:
+            existing_employee_id = existing_user[0]
+            existing_deleted = int(existing_user[1])
+
+            if existing_deleted == 1:
+                # Reactivează utilizatorul șters
+                cursor.execute("""
+                    UPDATE employees
+                    SET name = ?,
+                        position = ?,
+                        role = ?,
+                        pin_hash = ?,
+                        pin_salt = ?,
+                        deleted = 0
+                    WHERE id = ?
+                """, (
+                    clean_full_name,
+                    position,
+                    role,
+                    pin_hash,
+                    pin_salt,
+                    existing_employee_id
+                ))
+
+                cursor.execute("""
+                    INSERT INTO leave_balances (employee_id, annual_leave_days)
+                    VALUES (?, 21.0)
+                    ON CONFLICT(employee_id)
+                    DO NOTHING
+                """, (existing_employee_id,))
+
+                conn.commit()
+                conn.close()
+
+                st.cache_data.clear()
+
+                return True, existing_employee_id
+
+            conn.close()
+            return False, "Există deja un utilizator activ cu acest username."
+
+        cursor.execute("""
+            INSERT INTO employees (
+                username, name, position, role, pin_hash, pin_salt
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            clean_username,
+            clean_full_name,
+            position,
+            role,
+            pin_hash,
+            pin_salt
+        ))
+
+        employee_id = cursor.lastrowid
+
+        cursor.execute("""
+            INSERT INTO leave_balances (employee_id, annual_leave_days)
+            VALUES (?, 21.0)
+        """, (employee_id,))
+
+        conn.commit()
+        conn.close()
+
+        st.cache_data.clear()
+
+        return True, employee_id
+
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+
+        error_text = str(e).lower()
+
+        if "unique" in error_text and "username" in error_text:
+            return False, "Există deja un utilizator cu acest username, posibil șters anterior."
+
+        return False, f"Eroare la crearea utilizatorului: {e}"
 
     employee_id = cursor.lastrowid
 
@@ -1256,7 +1335,7 @@ if not st.session_state.logged_username:
             st.session_state.logged_username = employee["username"]
             st.rerun()
         else:
-            st.error("PIN greșit.")
+            st.error("Parolă greșită.")
 
     st.stop()
 
@@ -1441,8 +1520,6 @@ if admin_mode:
                 st.error("Numele complet este obligatoriu.")
             elif not new_pin.strip():
                 st.error("Parola inițială este obligatorie.")
-            elif get_employee_by_username(new_username):
-                st.error("Există deja un utilizator cu acest username.")
             else:
                 create_employee(
                     new_username,
