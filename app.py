@@ -1717,39 +1717,45 @@ if admin_mode:
                 st.success("Soldul a fost actualizat.")
                 st.rerun()
 
+page_left, page_col, page_right = st.columns([0.25, 2.5, 0.25])
+
+with page_col:
+    if admin_mode:
         st.markdown("#### Administrare concedii utilizator selectat")
+        visible_employee_id = selected_employee_id
+    else:
+        st.markdown("#### Concediile mele")
+        visible_employee_id = employee_id
 
-        selected_entries = get_entries_for_employee(selected_employee_id)
+    selected_entries = get_entries_for_employee(visible_employee_id)
 
-        selected_leave_entries = [
-            entry for entry in selected_entries
-            if entry["entry_type"] in ["Concediu odihna", "Concediu medical", "Concediu fara plata"]
-        ]
+    selected_leave_entries = [
+        entry for entry in selected_entries
+        if entry["entry_type"] in ["Concediu odihna", "Concediu medical", "Concediu fara plata"]
+    ]
 
-        if not selected_leave_entries:
-            st.info("Utilizatorul nu are concedii Inregistrate.")
-        else:
-            for entry in selected_leave_entries:
-                start_date = datetime.fromisoformat(entry["entry_date"]).date()
-                end_date = get_leave_end_date(entry)
+    if not selected_leave_entries:
+        st.info("Nu exista concedii inregistrate.")
+    else:
+        for entry in selected_leave_entries:
+            start_date = datetime.fromisoformat(entry["entry_date"]).date()
+            end_date = get_leave_end_date(entry)
 
-                col1, col2 = st.columns([8, 1], vertical_alignment="center")
+            col1, col2 = st.columns([8, 1], vertical_alignment="center")
 
-                with col1:
-                    st.markdown(
-                        f"**{entry['entry_type']} | "
-                        f"{start_date.strftime('%d.%m.%Y')} - {end_date.strftime('%d.%m.%Y')} | "
-                        f"{float(entry['leave_days']):.2f} zile**"
-                    )
+            with col1:
+                st.markdown(
+                    f"**{entry['entry_type']} | "
+                    f"{start_date.strftime('%d.%m.%Y')} - {end_date.strftime('%d.%m.%Y')} | "
+                    f"{float(entry['leave_days']):.2f} zile**"
+                )
 
-                with col2:
+            with col2:
+                if admin_mode:
                     if st.button("sterge", key=f"admin_delete_leave_{entry['id']}"):
                         soft_delete_entry(entry["id"])
                         st.success("Concediul a fost sters.")
                         st.rerun()
-
-                st.divider()
-
 
 
 def logout_employee():
