@@ -2009,19 +2009,48 @@ with page_col:
 # DISPLAY ENTRIES
 # -----------------------------
 
-balance = get_leave_balance(employee_id)
+display_employee_id = employee_id
+
+balance = get_leave_balance(display_employee_id)
 annual_days = float(balance["annual_leave_days"]) if balance else 21.0
-used_annual_days = float(get_used_annual_leave_days(employee_id))
+used_annual_days = float(get_used_annual_leave_days(display_employee_id))
 remaining_annual_days = annual_days - used_annual_days
 
-page_left, page_col, page_right = st.columns([0.25, 2.5, 0.25])
+if admin_mode:
+    page_left, page_col, page_right = st.columns([0.25, 2.5, 0.25])
+else:
+    page_left, page_col, page_right = st.columns([0.8, 2.4, 0.8])
 
 with page_col:
+    if not admin_mode:
+        st.markdown("## Concediile mele")
 
-    balance = get_leave_balance(employee_id)
-    annual_days = float(balance["annual_leave_days"]) if balance else 21.0
-    used_annual_days = float(get_used_annual_leave_days(employee_id))
-    remaining_annual_days = annual_days - used_annual_days
+        my_entries = get_entries_for_employee(employee_id)
+
+        my_leave_entries = [
+            entry for entry in my_entries
+            if entry["entry_type"] in [
+                "Concediu odihna",
+                "Concediu medical",
+                "Concediu fara plata"
+            ]
+        ]
+
+        if not my_leave_entries:
+            st.info("Nu ai concedii inregistrate.")
+        else:
+            for entry in my_leave_entries:
+                start_date = datetime.fromisoformat(entry["entry_date"]).date()
+                end_date = get_leave_end_date(entry)
+
+                st.markdown(
+                    f"**{entry['entry_type']} | "
+                    f"{start_date.strftime('%d.%m.%Y')} - "
+                    f"{end_date.strftime('%d.%m.%Y')} | "
+                    f"{float(entry['leave_days']):.2f} zile**"
+                )
+
+                st.divider()
 
     c1, c2, c3 = st.columns(3)
 
@@ -2034,7 +2063,14 @@ with page_col:
     with c3:
         st.metric("CO ramase", f"{remaining_annual_days:.2f}")
 
+    st.divider()
+
     if admin_mode:
+        st.markdown(
+            "<div style='font-size: 28px; font-weight: 700;'>Situatie angajat</div>",
+            unsafe_allow_html=True
+        )
+
         entries = get_all_entries_for_admin()
     else:
         entries = get_entries_for_employee(employee_id)
@@ -2042,17 +2078,15 @@ with page_col:
     if not entries:
         st.write("Nu exista intrari.")
 
-    # Grupam intrarile pe luna
     entries_by_month = {}
 
     for entry in entries:
-        month_key = entry["entry_date"][:7]  # exemplu: 2026-06
+        month_key = entry["entry_date"][:7]
 
         if month_key not in entries_by_month:
             entries_by_month[month_key] = []
 
         entries_by_month[month_key].append(entry)
-
 
     for month_key, month_entries in entries_by_month.items():
         month_label = format_month_ro(month_key)
