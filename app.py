@@ -1492,100 +1492,104 @@ if admin_mode:
         selected_user_row = users_df[users_df["nume_complet"] == selected_user_label].iloc[0]
         selected_employee_id = int(selected_user_row["employee_id"])
 
-    with st.expander("Administrare cont utilizator selectat", expanded=False):
 
-        edit_username = st.text_input(
-            "Username utilizator",
-            value=str(selected_user_row["username"]),
-            key=f"edit_username_{selected_employee_id}",
-            autocomplete="off"
-        )
+    page_left, page_col, page_right = st.columns([0.25, 2.5, 0.25])
 
-        edit_full_name = st.text_input(
-            "Nume complet utilizator",
-            value=str(selected_user_row["nume_complet"]),
-            key=f"edit_full_name_{selected_employee_id}",
-            autocomplete="off"
-        )
+    with page_col:
+        with st.expander("Administrare cont utilizator selectat", expanded=False):
 
-        current_position = selected_user_row["pozitie"]
+            edit_username = st.text_input(
+                "Username utilizator",
+                value=str(selected_user_row["username"]),
+                key=f"edit_username_{selected_employee_id}",
+                autocomplete="off"
+            )
 
-        if current_position in POSITION_OPTIONS:
-            position_index = POSITION_OPTIONS.index(current_position)
-        else:
-            position_index = 0
+            edit_full_name = st.text_input(
+                "Nume complet utilizator",
+                value=str(selected_user_row["nume_complet"]),
+                key=f"edit_full_name_{selected_employee_id}",
+                autocomplete="off"
+            )
 
-        edit_position = st.selectbox(
-            "Poziție utilizator",
-            POSITION_OPTIONS,
-            index=position_index,
-            key=f"edit_position_{selected_employee_id}"
-        )
+            current_position = selected_user_row["pozitie"]
 
-        if edit_position in ["Project Manager", "HR Admin"]:
-            edit_role = "Admin"
-        else:
-            edit_role = "Employee"
+            if current_position in POSITION_OPTIONS:
+                position_index = POSITION_OPTIONS.index(current_position)
+            else:
+                position_index = 0
+
+            edit_position = st.selectbox(
+                "Poziție utilizator",
+                POSITION_OPTIONS,
+                index=position_index,
+                key=f"edit_position_{selected_employee_id}"
+            )
+
+            if edit_position in ["Project Manager", "HR Admin"]:
+                edit_role = "Admin"
+            else:
+                edit_role = "Employee"
+
+                st.markdown("")
+
+            if st.button(
+                "Salvează modificările utilizatorului",
+                use_container_width=True,
+                key=f"btn_save_user_changes_{selected_employee_id}"
+            ):
+                if not edit_username.strip():
+                    st.error("Username obligatoriu.")
+                elif not edit_full_name.strip():
+                    st.error("Numele complet este obligatoriu.")
+                else:
+                    success, result = update_employee(
+                    selected_employee_id,
+                    edit_username,
+                    edit_full_name,
+                    edit_position,
+                    edit_role
+                )
+
+                if success and result:
+                    st.success("Utilizatorul a fost modificat.")
+                    st.rerun()
+                elif success and not result:
+                    st.error("Utilizatorul nu a fost găsit sau nu a putut fi modificat.")
+                else:
+                    st.error(result)
 
             st.markdown("")
 
-        if st.button(
-            "Salvează modificările utilizatorului",
-            use_container_width=True,
-            key=f"btn_save_user_changes_{selected_employee_id}"
-        ):
-            if not edit_username.strip():
-                st.error("Username obligatoriu.")
-            elif not edit_full_name.strip():
-                st.error("Numele complet este obligatoriu.")
+            if selected_employee_id == employee_id:
+                st.button(
+                    "Șterge utilizatorul",
+                    disabled=True,
+                    use_container_width=True,
+                    help="Nu poți șterge utilizatorul cu care ești logat.",
+                    key=f"btn_delete_user_disabled_{selected_employee_id}"
+                )
             else:
-                success, result = update_employee(
-                selected_employee_id,
-                edit_username,
-                edit_full_name,
-                edit_position,
-                edit_role
-            )
+                confirm_delete_user = st.checkbox(
+                    "Confirm ștergerea utilizatorului",
+                    key=f"confirm_delete_user_{selected_employee_id}"
+                )
 
-            if success and result:
-                st.success("Utilizatorul a fost modificat.")
-                st.rerun()
-            elif success and not result:
-                st.error("Utilizatorul nu a fost găsit sau nu a putut fi modificat.")
-            else:
-                st.error(result)
-
-        st.markdown("")
-
-        if selected_employee_id == employee_id:
-            st.button(
-                "Șterge utilizatorul",
-                disabled=True,
-                use_container_width=True,
-                help="Nu poți șterge utilizatorul cu care ești logat.",
-                key=f"btn_delete_user_disabled_{selected_employee_id}"
-            )
-        else:
-            confirm_delete_user = st.checkbox(
-                "Confirm ștergerea utilizatorului",
-                key=f"confirm_delete_user_{selected_employee_id}"
-            )
-
-            if st.button(
-                "Șterge utilizatorul",
-                use_container_width=True,
-                key=f"btn_delete_user_{selected_employee_id}"
-            ):
-                if not confirm_delete_user:
-                    st.error("Bifează confirmarea înainte de ștergere.")
-                else:
-                    deleted = soft_delete_employee(selected_employee_id)
-
-                    if deleted:
-                        st.success("Utilizatorul a fost șters.")
-                        st.rerun()
+                if st.button(
+                    "Șterge utilizatorul",
+                    use_container_width=True,
+                    key=f"btn_delete_user_{selected_employee_id}"
+                ):
+                    if not confirm_delete_user:
+                        st.error("Bifează confirmarea înainte de ștergere.")
                     else:
-                        st.error("Utilizatorul nu a fost găsit sau nu a putut fi șters.")
+                        deleted = soft_delete_employee(selected_employee_id)
+
+                        if deleted:
+                            st.success("Utilizatorul a fost șters.")
+                            st.rerun()
+                        else:
+                            st.error("Utilizatorul nu a fost găsit sau nu a putut fi șters.")
 
     st.markdown("#### Sold CO")
 
