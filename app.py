@@ -1666,7 +1666,7 @@ if admin_mode:
 
             if selected_employee_id == employee_id:
                 st.button(
-                    "sterge utilizatorul",
+                    "Sterge utilizatorul",
                     disabled=True,
                     use_container_width=True,
                     help="Nu poti sterge utilizatorul cu care esti logat.",
@@ -1679,7 +1679,7 @@ if admin_mode:
                 )
 
                 if st.button(
-                    "sterge utilizatorul",
+                    "Sterge utilizatorul",
                     use_container_width=True,
                     key=f"btn_delete_user_{selected_employee_id}"
                 ):
@@ -2207,10 +2207,7 @@ with page_col:
                 )
 
             if invoiri and concedii:
-                inner_left, inner_mid, inner_right = st.columns([0.03, 0.94, 0.03])
-
-                with inner_mid:
-                    st.divider()
+                st.divider()
 
             if concedii:
                 st.markdown(
@@ -2248,9 +2245,9 @@ with page_col:
                     st.markdown(
                         f"**{float(entry['leave_days']):.2f} zile**"
                     )
-st.divider()
 
-
+            if concedii:
+                st.divider()
 
 st.sidebar.markdown("### Export")
 
