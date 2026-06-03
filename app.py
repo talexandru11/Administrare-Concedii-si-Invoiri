@@ -673,7 +673,7 @@ def add_entry(employee_id, entry_date, end_date, entry_type, hours, leave_days, 
     conn = get_connection()
     cursor = conn.cursor()
 
-    if entry_type == "invoire":
+    if entry_type == "Invoire":
         final_hours = int(hours)
         final_leave_days = 0.0
         final_end_date = None
