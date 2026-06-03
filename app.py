@@ -14,7 +14,7 @@ except ImportError:
 
 DB_NAME = "leave_tracker.db"
 
-RECOVERABLE_TYPES = ["Învoire"]
+RECOVERABLE_TYPES = ["Invoire"]
 
 LEAVE_TYPES = [
     "Concediu odihna",
@@ -36,7 +36,7 @@ POSITION_OPTIONS = [
 def count_business_days(start_date, end_date):
     """
     Numara zilele lucratoare dintre start_date si end_date.
-    end_date este exclusiva, adica ziua întoarcerii nu se scade.
+    end_date este exclusiva, adica ziua Intoarcerii nu se scade.
     Weekendul este ignorat.
     """
     days = 0
@@ -155,7 +155,7 @@ def has_overlapping_leave(employee_id, start_date, end_date, exclude_entry_id=No
 def get_entry_interval(entry):
     start = datetime.fromisoformat(entry["entry_date"]).date()
 
-    if entry["entry_type"] == "Învoire":
+    if entry["entry_type"] == "Invoire":
         end = start + timedelta(days=1)
     else:
         end = get_leave_end_date(entry)
@@ -165,7 +165,7 @@ def get_entry_interval(entry):
 def get_entry_interval(entry):
     start = datetime.fromisoformat(entry["entry_date"]).date()
 
-    if entry["entry_type"] == "Învoire":
+    if entry["entry_type"] == "Invoire":
         end = start + timedelta(days=1)
     else:
         end = get_leave_end_date(entry)
@@ -479,7 +479,7 @@ def get_people_off_on_date(target_date):
                 )
                 OR
                 (
-                    e.entry_type = 'Învoire'
+                    e.entry_type = 'Invoire'
                     AND e.entry_date = ?
                 )
           )
@@ -673,7 +673,7 @@ def add_entry(employee_id, entry_date, end_date, entry_type, hours, leave_days, 
     conn = get_connection()
     cursor = conn.cursor()
 
-    if entry_type == "Învoire":
+    if entry_type == "Invoire":
         final_hours = int(hours)
         final_leave_days = 0.0
         final_end_date = None
@@ -707,7 +707,7 @@ def add_entry(employee_id, entry_date, end_date, entry_type, hours, leave_days, 
 
     entry_id = cursor.lastrowid
 
-    if entry_type == "Învoire":
+    if entry_type == "Invoire":
         for i in range(1, final_hours + 1):
             cursor.execute("""
                 INSERT INTO recovery_hours (entry_id, hour_index, is_recovered)
@@ -1081,7 +1081,7 @@ def get_full_report_data(start_date, end_date):
             AND e.deleted = 0
             AND (
                 (
-                    e.entry_type = 'Învoire'
+                    e.entry_type = 'Invoire'
                     AND e.entry_date BETWEEN ? AND ?
                 )
                 OR
@@ -1295,7 +1295,7 @@ if not st.session_state.logged_username:
             """
             <div class="login-box">
                 <div class="login-title">STATUS32</div>
-                <div class="login-subtitle">Administrare concedii si învoiri</div>
+                <div class="login-subtitle">Administrare concedii si Invoiri</div>
             </div>
             """,
             unsafe_allow_html=True
@@ -1381,7 +1381,7 @@ with st.sidebar.expander("Cine are liber azi", expanded=True):
         for person in people_off_today:
             start_date = datetime.fromisoformat(person["entry_date"]).date()
 
-            if person["entry_type"] == "Învoire":
+            if person["entry_type"] == "Invoire":
                 st.markdown(
                     f"""
                     <div style="
@@ -1391,7 +1391,7 @@ with st.sidebar.expander("Cine are liber azi", expanded=True):
                         <b>{person['name']}</b><br>
                         <span style="font-size: 13px; opacity: 0.75;">
                             {person['position'] or 'Fara pozitie'}<br>
-                            Învoire - {person['hours']} ore<br>
+                            Invoire - {person['hours']} ore<br>
                             {start_date.strftime('%d.%m.%Y')}
                         </span>
                     </div>
@@ -1461,7 +1461,7 @@ with st.sidebar.expander("Schimba Parola"):
             pin_updated = update_user_pin(employee_id, new_pin)
 
             if not pin_updated:
-                st.error("Parola nu a fost actualizata. ID-ul utilizatorului nu a fost gasit în baza de date.")
+                st.error("Parola nu a fost actualizata. ID-ul utilizatorului nu a fost gasit In baza de date.")
                 st.stop()
 
             st.session_state.logged_username = ""
@@ -1483,7 +1483,7 @@ with st.sidebar.expander("Schimba Parola"):
             pin_updated = update_user_pin(employee_id, new_pin)
 
             if not pin_updated:
-                st.error("Parola nu a fost actualizata. ID-ul utilizatorului nu a fost gasit în baza de date.")
+                st.error("Parola nu a fost actualizata. ID-ul utilizatorului nu a fost gasit In baza de date.")
                 st.stop()
 
             st.session_state.logged_username = ""
@@ -1691,7 +1691,7 @@ if admin_mode:
                     key=f"btn_delete_user_{selected_employee_id}"
                 ):
                     if not confirm_delete_user:
-                        st.error("Bifeaza confirmarea înainte de stergere.")
+                        st.error("Bifeaza confirmarea Inainte de stergere.")
                     else:
                         deleted = soft_delete_employee(selected_employee_id)
 
@@ -1734,7 +1734,7 @@ if admin_mode:
         ]
 
         if not selected_leave_entries:
-            st.info("Utilizatorul nu are concedii înregistrate.")
+            st.info("Utilizatorul nu are concedii Inregistrate.")
         else:
             for entry in selected_leave_entries:
                 start_date = datetime.fromisoformat(entry["entry_date"]).date()
@@ -1776,7 +1776,7 @@ if admin_mode:
     )
 
     report_end_date = st.sidebar.date_input(
-        "Pâna la",
+        "Pana la",
         key="report_end_date"
     )
 
@@ -1847,7 +1847,7 @@ with page_col:
         with st.form(key=f"form_add_entry_{target_employee_id}"):
             entry_type = st.selectbox(
                 "Tip intrare",
-                ["Învoire", "Concediu odihna", "Concediu medical", "Concediu fara plata"],
+                ["Invoire", "Concediu odihna", "Concediu medical", "Concediu fara plata"],
                 key="entry_type_select",
                 accept_new_options=False
             )
@@ -1861,7 +1861,7 @@ with page_col:
             leave_days = 0.0
             end_date = None
 
-            if entry_type == "Învoire":
+            if entry_type == "Invoire":
                 hours = st.number_input(
                     "Ore de recuperat",
                     min_value=1,
@@ -1871,7 +1871,7 @@ with page_col:
                 )
             else:
                 end_date = st.date_input(
-                    "Data întoarcerii",
+                    "Data Intoarcerii",
                     value=entry_date + timedelta(days=1),
                     key="leave_end_date_input"
                 )
@@ -1916,12 +1916,12 @@ with page_col:
         if submitted_entry:
             overdraw = False
 
-            if entry_type == "Învoire":
+            if entry_type == "Invoire":
                 new_start = entry_date
                 new_end = entry_date + timedelta(days=1)
             else:
                 if end_date <= entry_date:
-                    st.error("Data întoarcerii trebuie sa fie dupa data de început.")
+                    st.error("Data Intoarcerii trebuie sa fie dupa data de Inceput.")
                     st.stop()
 
                 new_start = entry_date
@@ -1979,7 +1979,7 @@ with page_col:
             pending = st.session_state.pending_entry
 
             st.warning(
-                f"Atentie: încerci sa iei {pending['leave_days']:.2f} zile CO, "
+                f"Atentie: Incerci sa iei {pending['leave_days']:.2f} zile CO, "
                 f"dar mai ai disponibile doar {pending['remaining_days']:.2f}. "
                 f"Daca salvezi, vei ajunge la "
                 f"{pending['remaining_days'] - pending['leave_days']:.2f} zile."
@@ -2054,17 +2054,17 @@ with page_col:
         st.subheader(month_label)
 
         # -----------------------------
-        # ÎNVOIRI
+        # INVOIRI
         # -----------------------------
 
         invoiri = [
             entry for entry in month_entries
-            if entry["entry_type"] == "Învoire"
+            if entry["entry_type"] == "Invoire"
         ]
 
         if invoiri:
             st.markdown(
-                f"<div style='font-size: 22px; font-weight: 700; margin-top: 16px; margin-bottom: 8px;'>Învoire - {month_label}</div>",
+                f"<div style='font-size: 22px; font-weight: 700; margin-top: 16px; margin-bottom: 8px;'>Invoire - {month_label}</div>",
                 unsafe_allow_html=True
             )
 
@@ -2131,7 +2131,7 @@ with page_col:
                     st.rerun()
 
             if admin_mode:
-                if st.button("sterge învoirea", key=f"delete_invoire_{entry['id']}"):
+                if st.button("sterge Invoirea", key=f"delete_invoire_{entry['id']}"):
                     soft_delete_entry(entry["id"])
                     st.rerun()
 
@@ -2200,13 +2200,13 @@ with page_col:
                 if admin_mode:
                     with st.expander(f"Admin - modifica intervalul {start_date.strftime('%d.%m.%Y')}"):
                         new_date = st.date_input(
-                            "Data început",
+                            "Data Inceput",
                             value=start_date,
                             key=f"edit_date_{entry['id']}"
                         )
 
                         new_end_date = st.date_input(
-                            "Data întoarcerii",
+                            "Data Intoarcerii",
                             value=end_date,
                             key=f"edit_end_date_{entry['id']}"
                         )
@@ -2251,31 +2251,6 @@ with page_col:
                             )
                             st.success("Concediul a fost modificat.")
                             st.rerun()
-
-#            st.divider()
-
-# -----------------------------
-# EXPORT
-# -----------------------------
-
-# st.sidebar.markdown("### Export")
-
-# df_export = get_export_data(employee_id)
-
-# if not df_export.empty:
-#     excel_file = "export_angajat.xlsx"
-#     df_export.to_excel(excel_file, index=False)
-
-#     with open(excel_file, "rb") as file:
-#         st.sidebar.download_button(
-#             label="Descarca Excel",
-#             data=file,
-#             file_name=f"situatie_{employee_name.strip()}.xlsx",
-#             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-#             use_container_width=True
-#         )
-# else:
-#     st.sidebar.write("Nu exista date pentru export.")
 
 st.sidebar.markdown("### Export")
 
