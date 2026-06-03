@@ -1509,54 +1509,63 @@ with page_col:
     else:
         edit_role = "Employee"
 
-    col_edit, col_delete = st.columns(2)
+        st.markdown("")
 
-    with col_edit:
-        if st.button("Salvează modificările utilizatorului", use_container_width=True):
-            if not edit_username.strip():
-                st.error("Username obligatoriu.")
-            elif not edit_full_name.strip():
-                st.error("Numele complet este obligatoriu.")
+    if st.button(
+        "Salvează modificările utilizatorului",
+        use_container_width=True,
+        key=f"btn_save_user_changes_{selected_employee_id}"
+    ):
+        if not edit_username.strip():
+            st.error("Username obligatoriu.")
+        elif not edit_full_name.strip():
+            st.error("Numele complet este obligatoriu.")
+        else:
+            updated = update_employee(
+                selected_employee_id,
+                edit_username,
+                edit_full_name,
+                edit_position,
+                edit_role
+            )
+
+            if updated:
+                st.success("Utilizatorul a fost modificat.")
+                st.rerun()
             else:
-                updated = update_employee(
-                    selected_employee_id,
-                    edit_username,
-                    edit_full_name,
-                    edit_position,
-                    edit_role
-                )
+                st.error("Utilizatorul nu a fost găsit sau nu a putut fi modificat.")
 
-                if updated:
-                    st.success("Utilizatorul a fost modificat.")
+    st.markdown("")
+
+    if selected_employee_id == employee_id:
+        st.button(
+            "Șterge utilizatorul",
+            disabled=True,
+            use_container_width=True,
+            help="Nu poți șterge utilizatorul cu care ești logat.",
+            key=f"btn_delete_user_disabled_{selected_employee_id}"
+        )
+    else:
+        confirm_delete_user = st.checkbox(
+            "Confirm ștergerea utilizatorului",
+            key=f"confirm_delete_user_{selected_employee_id}"
+        )
+
+        if st.button(
+            "Șterge utilizatorul",
+            use_container_width=True,
+            key=f"btn_delete_user_{selected_employee_id}"
+        ):
+            if not confirm_delete_user:
+                st.error("Bifează confirmarea înainte de ștergere.")
+            else:
+                deleted = soft_delete_employee(selected_employee_id)
+
+                if deleted:
+                    st.success("Utilizatorul a fost șters.")
                     st.rerun()
                 else:
-                    st.error("Utilizatorul nu a fost găsit sau nu a putut fi modificat.")
-
-    with col_delete:
-        if selected_employee_id == employee_id:
-            st.button(
-                "Șterge utilizatorul",
-                disabled=True,
-                use_container_width=True,
-                help="Nu poți șterge utilizatorul cu care ești logat."
-            )
-        else:
-            confirm_delete_user = st.checkbox(
-                "Confirm ștergerea utilizatorului",
-                key=f"confirm_delete_user_{selected_employee_id}"
-            )
-
-            if st.button("Șterge utilizatorul", use_container_width=True):
-                if not confirm_delete_user:
-                    st.error("Bifează confirmarea înainte de ștergere.")
-                else:
-                    deleted = soft_delete_employee(selected_employee_id)
-
-                    if deleted:
-                        st.success("Utilizatorul a fost șters.")
-                        st.rerun()
-                    else:
-                        st.error("Utilizatorul nu a fost găsit sau nu a putut fi șters.")
+                    st.error("Utilizatorul nu a fost găsit sau nu a putut fi șters.")
 
     st.markdown("#### Sold CO")
 
