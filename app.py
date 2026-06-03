@@ -7,10 +7,12 @@ from io import BytesIO
 import os, hashlib
 import locale
 import psycopg2
-import libsql
+try:
+    import libsql
+except ImportError:
+    libsql = None
 
-
-#DB_NAME = "leave_tracker.db"
+DB_NAME = "leave_tracker.db"
 
 RECOVERABLE_TYPES = ["Învoire"]
 
@@ -227,17 +229,28 @@ def format_month_ro(month_key):
 #     return sqlite3.connect(DB_NAME)
 
 def get_connection():
-    turso_url = st.secrets.get("TURSO_DATABASE_URL", "")
-    turso_token = st.secrets.get("TURSO_AUTH_TOKEN", "")
+    turso_url = ""
+    turso_token = ""
+
+    try:
+        if hasattr(st, "secrets"):
+            turso_url = st.secrets["TURSO_DATABASE_URL"] if "TURSO_DATABASE_URL" in st.secrets else ""
+            turso_token = st.secrets["TURSO_AUTH_TOKEN"] if "TURSO_AUTH_TOKEN" in st.secrets else ""
+    except Exception:
+        turso_url = ""
+        turso_token = ""
 
     if turso_url and turso_token:
+        if libsql is None:
+            st.error("libsql is not installed. Locally, either install libsql or run without Turso secrets.")
+            st.stop()
+
         return libsql.connect(
             turso_url,
             auth_token=turso_token
         )
 
-    st.error("Baza Turso nu este configurată. Lipsesc TURSO_DATABASE_URL sau TURSO_AUTH_TOKEN.")
-    st.stop()
+    return sqlite3.connect(DB_NAME)
 
 def rows_to_dicts(cursor, rows):
     columns = [col[0] for col in cursor.description]
@@ -1458,89 +1471,92 @@ if admin_mode:
     selected_user_row = users_df[users_df["nume_complet"] == selected_user_label].iloc[0]
     selected_employee_id = int(selected_user_row["employee_id"])
 
+page_left, page_col, page_right = st.columns([0.25, 2.5, 0.25])
+
+with page_col:
     st.markdown("#### Editează utilizator")
 
-edit_username = st.text_input(
-    "Username utilizator",
-    value=str(selected_user_row["username"]),
-    key=f"edit_username_{selected_employee_id}",
-    autocomplete="off"
-)
+    edit_username = st.text_input(
+        "Username utilizator",
+        value=str(selected_user_row["username"]),
+        key=f"edit_username_{selected_employee_id}",
+        autocomplete="off"
+    )
 
-edit_full_name = st.text_input(
-    "Nume complet utilizator",
-    value=str(selected_user_row["nume_complet"]),
-    key=f"edit_full_name_{selected_employee_id}",
-    autocomplete="off"
-)
+    edit_full_name = st.text_input(
+        "Nume complet utilizator",
+        value=str(selected_user_row["nume_complet"]),
+        key=f"edit_full_name_{selected_employee_id}",
+        autocomplete="off"
+    )
 
-current_position = selected_user_row["pozitie"]
+    current_position = selected_user_row["pozitie"]
 
-if current_position in POSITION_OPTIONS:
-    position_index = POSITION_OPTIONS.index(current_position)
-else:
-    position_index = 0
-
-edit_position = st.selectbox(
-    "Poziție utilizator",
-    POSITION_OPTIONS,
-    index=position_index,
-    key=f"edit_position_{selected_employee_id}"
-)
-
-if edit_position in ["Project Manager", "HR Admin"]:
-    edit_role = "Admin"
-else:
-    edit_role = "Employee"
-
-col_edit, col_delete = st.columns(2)
-
-with col_edit:
-    if st.button("Salvează modificările utilizatorului", use_container_width=True):
-        if not edit_username.strip():
-            st.error("Username obligatoriu.")
-        elif not edit_full_name.strip():
-            st.error("Numele complet este obligatoriu.")
-        else:
-            updated = update_employee(
-                selected_employee_id,
-                edit_username,
-                edit_full_name,
-                edit_position,
-                edit_role
-            )
-
-            if updated:
-                st.success("Utilizatorul a fost modificat.")
-                st.rerun()
-            else:
-                st.error("Utilizatorul nu a fost găsit sau nu a putut fi modificat.")
-
-with col_delete:
-    if selected_employee_id == employee_id:
-        st.button(
-            "Șterge utilizatorul",
-            disabled=True,
-            use_container_width=True,
-            help="Nu poți șterge utilizatorul cu care ești logat."
-        )
+    if current_position in POSITION_OPTIONS:
+        position_index = POSITION_OPTIONS.index(current_position)
     else:
-        confirm_delete_user = st.checkbox(
-            "Confirm ștergerea utilizatorului",
-            key=f"confirm_delete_user_{selected_employee_id}"
-        )
+        position_index = 0
 
-        if st.button("Șterge utilizatorul", use_container_width=True):
-            if not confirm_delete_user:
-                st.error("Bifează confirmarea înainte de ștergere.")
+    edit_position = st.selectbox(
+        "Poziție utilizator",
+        POSITION_OPTIONS,
+        index=position_index,
+        key=f"edit_position_{selected_employee_id}"
+    )
+
+    if edit_position in ["Project Manager", "HR Admin"]:
+        edit_role = "Admin"
+    else:
+        edit_role = "Employee"
+
+    col_edit, col_delete = st.columns(2)
+
+    with col_edit:
+        if st.button("Salvează modificările utilizatorului", use_container_width=True):
+            if not edit_username.strip():
+                st.error("Username obligatoriu.")
+            elif not edit_full_name.strip():
+                st.error("Numele complet este obligatoriu.")
             else:
-                deleted = soft_delete_employee(selected_employee_id)
+                updated = update_employee(
+                    selected_employee_id,
+                    edit_username,
+                    edit_full_name,
+                    edit_position,
+                    edit_role
+                )
 
-                if deleted:
-                    st.success("Utilizatorul a fost șters.")
+                if updated:
+                    st.success("Utilizatorul a fost modificat.")
                     st.rerun()
                 else:
-                    st.error("Utilizatorul nu a fost găsit sau nu a putut fi șters.")
+                    st.error("Utilizatorul nu a fost găsit sau nu a putut fi modificat.")
+
+    with col_delete:
+        if selected_employee_id == employee_id:
+            st.button(
+                "Șterge utilizatorul",
+                disabled=True,
+                use_container_width=True,
+                help="Nu poți șterge utilizatorul cu care ești logat."
+            )
+        else:
+            confirm_delete_user = st.checkbox(
+                "Confirm ștergerea utilizatorului",
+                key=f"confirm_delete_user_{selected_employee_id}"
+            )
+
+            if st.button("Șterge utilizatorul", use_container_width=True):
+                if not confirm_delete_user:
+                    st.error("Bifează confirmarea înainte de ștergere.")
+                else:
+                    deleted = soft_delete_employee(selected_employee_id)
+
+                    if deleted:
+                        st.success("Utilizatorul a fost șters.")
+                        st.rerun()
+                    else:
+                        st.error("Utilizatorul nu a fost găsit sau nu a putut fi șters.")
 
     st.markdown("#### Sold CO")
 
@@ -1734,457 +1750,446 @@ if admin_mode and "admin_selected_user" in st.session_state:
 else:
     target_employee_id = employee_id
 
-with st.expander("Adaugă intrare nouă", expanded=False):
-    entry_type = st.selectbox(
-        "Tip intrare",
-        ["Învoire", "Concediu odihnă", "Concediu medical", "Concediu fără plată"],
-        key="entry_type_select",
-        accept_new_options=False
+page_left, page_col, page_right = st.columns([0.25, 2.5, 0.25])
 
-    )
-
-    entry_date = st.date_input(
-        "Data plecării",
-        key="entry_date_input"
-    )
-
-    hours = 0
-    leave_days = 0.0
-    end_date = None
-
-    if entry_type == "Învoire":
-        hours = st.number_input(
-            "Ore de recuperat",
-            min_value=1,
-            max_value=12,
-            step=1,
-            key="hours_input"
-        )
-    else:
-        end_date = st.date_input(
-            "Data întoarcerii",
-            value=entry_date + timedelta(days=1),
-            key="leave_end_date_input"
+with page_col:
+    with st.expander("Adaugă intrare nouă", expanded=False):
+        entry_type = st.selectbox(
+            "Tip intrare",
+            ["Învoire", "Concediu odihnă", "Concediu medical", "Concediu fără plată"],
+            key="entry_type_select",
+            accept_new_options=False
         )
 
-        calculated_leave_days = count_business_days(entry_date, end_date)
-
-        st.info(
-            f"Zile de concediu calculate, fără weekend: {calculated_leave_days:.2f}"
+        entry_date = st.date_input(
+            "Data plecării",
+            key="entry_date_input"
         )
 
-        manual_override = st.checkbox(
-            "Suprascrie manual zilele scăzute",
-            key="manual_override_input"
-        )
-
-        if manual_override:
-            leave_days = st.number_input(
-                "Zile de concediu scăzute manual",
-                min_value=0.0,
-                max_value=31.0,
-                value=float(calculated_leave_days),
-                step=0.25,
-                format="%.2f",
-                key=f"leave_days_manual_{entry_date}_{end_date}"
-            )
-        else:
-            leave_days = float(calculated_leave_days)
-
-    description = st.text_area(
-        "Observații",
-        key="description_input"
-    )
-
-    if "confirm_overdraw" not in st.session_state:
-        st.session_state.confirm_overdraw = False
-
-    if st.button("Salvează intrarea", key="save_entry_button"):
-        overdraw = False
+        hours = 0
+        leave_days = 0.0
+        end_date = None
 
         if entry_type == "Învoire":
-            new_start = entry_date
-            new_end = entry_date + timedelta(days=1)
+            hours = st.number_input(
+                "Ore de recuperat",
+                min_value=1,
+                max_value=12,
+                step=1,
+                key="hours_input"
+            )
         else:
-            if end_date <= entry_date:
-                st.error("Data întoarcerii trebuie să fie după data de început.")
+            end_date = st.date_input(
+                "Data întoarcerii",
+                value=entry_date + timedelta(days=1),
+                key="leave_end_date_input"
+            )
+
+            calculated_leave_days = count_business_days(entry_date, end_date)
+
+            st.info(
+                f"Zile de concediu calculate, fără weekend: {calculated_leave_days:.2f}"
+            )
+
+            manual_override = st.checkbox(
+                "Suprascrie manual zilele scăzute",
+                key="manual_override_input"
+            )
+
+            if manual_override:
+                leave_days = st.number_input(
+                    "Zile de concediu scăzute manual",
+                    min_value=0.0,
+                    max_value=31.0,
+                    value=float(calculated_leave_days),
+                    step=0.25,
+                    format="%.2f",
+                    key=f"leave_days_manual_{entry_date}_{end_date}"
+                )
+            else:
+                leave_days = float(calculated_leave_days)
+
+        description = st.text_area(
+            "Observații",
+            key="description_input"
+        )
+
+        if "confirm_overdraw" not in st.session_state:
+            st.session_state.confirm_overdraw = False
+
+        if st.button("Salvează intrarea", key="save_entry_button"):
+            overdraw = False
+
+            if entry_type == "Învoire":
+                new_start = entry_date
+                new_end = entry_date + timedelta(days=1)
+            else:
+                if end_date <= entry_date:
+                    st.error("Data întoarcerii trebuie să fie după data de început.")
+                    st.stop()
+
+                new_start = entry_date
+                new_end = end_date
+
+            conflict, existing, existing_start, existing_end = has_conflicting_entry(
+                target_employee_id,
+                new_start,
+                new_end
+            )
+
+            if conflict:
+                st.error(
+                    f"Interval invalid: se suprapune cu o intrare existentă "
+                    f"({existing['entry_type']} {existing_start.strftime('%d.%m.%Y')} - "
+                    f"{existing_end.strftime('%d.%m.%Y')})."
+                )
                 st.stop()
 
-            new_start = entry_date
-            new_end = end_date
+            if entry_type == "Concediu odihnă":
+                balance = get_leave_balance(target_employee_id)
+                annual_days = float(balance["annual_leave_days"]) if balance else 21.0
+                used_days = float(get_used_annual_leave_days(target_employee_id))
+                remaining_days = annual_days - used_days
 
-        conflict, existing, existing_start, existing_end = has_conflicting_entry(
-            target_employee_id,
-            new_start,
-            new_end
-        )
+                if float(leave_days) > remaining_days:
+                    overdraw = True
+                    st.session_state.confirm_overdraw = True
+                    st.session_state.pending_entry = {
+                        "employee_id": target_employee_id,
+                        "entry_date": entry_date,
+                        "end_date": end_date,
+                        "entry_type": entry_type,
+                        "hours": int(hours),
+                        "leave_days": float(leave_days),
+                        "description": description,
+                        "remaining_days": remaining_days
+                    }
 
-        if conflict:
-            st.error(
-                f"Interval invalid: se suprapune cu o intrare existentă "
-                f"({existing['entry_type']} {existing_start.strftime('%d.%m.%Y')} - "
-                f"{existing_end.strftime('%d.%m.%Y')})."
-            )
-            st.stop()
-
-        if entry_type == "Concediu odihnă":
-            balance = get_leave_balance(target_employee_id)
-            annual_days = float(balance["annual_leave_days"]) if balance else 21.0
-            used_days = float(get_used_annual_leave_days(target_employee_id))
-            remaining_days = annual_days - used_days
-
-            if float(leave_days) > remaining_days:
-                overdraw = True
-                st.session_state.confirm_overdraw = True
-                st.session_state.pending_entry = {
-                    "employee_id": employee_id,
-                    "entry_date": entry_date,
-                    "end_date": end_date,
-                    "entry_type": entry_type,
-                    "hours": int(hours),
-                    "leave_days": float(leave_days),
-                    "description": description,
-                    "remaining_days": remaining_days
-                }
-
-        if not overdraw:
-            add_entry(
-                target_employee_id,
-                entry_date,
-                end_date,
-                entry_type,
-                int(hours),
-                float(leave_days),
-                description
-            )
-
-            st.success("Intrarea a fost salvată.")
-            st.rerun()
-
-    if st.session_state.confirm_overdraw:
-        pending = st.session_state.pending_entry
-
-        st.warning(
-            f"Atenție: încerci să iei {pending['leave_days']:.2f} zile CO, "
-            f"dar mai ai disponibile doar {pending['remaining_days']:.2f}. "
-            f"Dacă salvezi, vei ajunge la "
-            f"{pending['remaining_days'] - pending['leave_days']:.2f} zile."
-        )
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-            if st.button("Confirmă salvarea pe minus", key="confirm_overdraw_button"):
+            if not overdraw:
                 add_entry(
-                    pending["employee_id"],
-                    pending["entry_date"],
-                    pending["end_date"],
-                    pending["entry_type"],
-                    pending["hours"],
-                    pending["leave_days"],
-                    pending["description"]
+                    target_employee_id,
+                    entry_date,
+                    end_date,
+                    entry_type,
+                    int(hours),
+                    float(leave_days),
+                    description
                 )
 
-                st.session_state.confirm_overdraw = False
-                st.session_state.pending_entry = None
-
-                st.success("Intrarea a fost salvată cu sold negativ.")
+                st.success("Intrarea a fost salvată.")
                 st.rerun()
 
-        with col2:
-            if st.button("Renunță", key="cancel_overdraw_button"):
-                st.session_state.confirm_overdraw = False
-                st.session_state.pending_entry = None
-                st.rerun()
+        if st.session_state.confirm_overdraw:
+            pending = st.session_state.pending_entry
 
-st.divider()
+            st.warning(
+                f"Atenție: încerci să iei {pending['leave_days']:.2f} zile CO, "
+                f"dar mai ai disponibile doar {pending['remaining_days']:.2f}. "
+                f"Dacă salvezi, vei ajunge la "
+                f"{pending['remaining_days'] - pending['leave_days']:.2f} zile."
+            )
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                if st.button("Confirmă salvarea pe minus", key="confirm_overdraw_button"):
+                    add_entry(
+                        pending["employee_id"],
+                        pending["entry_date"],
+                        pending["end_date"],
+                        pending["entry_type"],
+                        pending["hours"],
+                        pending["leave_days"],
+                        pending["description"]
+                    )
+
+                    st.session_state.confirm_overdraw = False
+                    st.session_state.pending_entry = None
+
+                    st.success("Intrarea a fost salvată cu sold negativ.")
+                    st.rerun()
+
+            with col2:
+                if st.button("Renunță", key="cancel_overdraw_button"):
+                    st.session_state.confirm_overdraw = False
+                    st.session_state.pending_entry = None
+                    st.rerun()
+
+
 
 # -----------------------------
 # DISPLAY ENTRIES
 # -----------------------------
 
 if admin_mode:
-    st.markdown(
-        "<div style='font-size: 28px; font-weight: 700;'>Admin - Sold utilizator curent</div>",
-        unsafe_allow_html=True
-)
+    page_left, page_col, page_right = st.columns([0.25, 2.5, 0.25])
 
-    balance = get_leave_balance(employee_id)
-    current_annual_days = balance["annual_leave_days"] if balance else 21
+    with page_col:
+        st.markdown(
+            "<div style='font-size: 28px; font-weight: 700;'>Admin - Sold utilizator curent</div>",
+            unsafe_allow_html=True
+        )
 
-    new_annual_days = st.number_input(
-        "Total zile CO disponibile",
-        min_value=-365.0,
-        max_value=365.0,
-        value=float(current_annual_days),
-        step=0.25,
-        format="%.2f"
-    )
+        balance = get_leave_balance(employee_id)
+        current_annual_days = balance["annual_leave_days"] if balance else 21
 
-    if st.button("Actualizează sold CO"):
-        update_annual_leave_days(employee_id, float(new_annual_days))
-        st.success("Soldul de concediu a fost actualizat.")
-        st.rerun()
+        new_annual_days = st.number_input(
+            "Total zile CO disponibile",
+            min_value=-365.0,
+            max_value=365.0,
+            value=float(current_annual_days),
+            step=0.25,
+            format="%.2f",
+            key=f"current_user_balance_{employee_id}"
+        )
+
+        if st.button(
+            "Actualizează sold CO",
+            use_container_width=True,
+            key=f"btn_update_current_user_balance_{employee_id}"
+        ):
+            update_annual_leave_days(employee_id, float(new_annual_days))
+            st.success("Soldul de concediu a fost actualizat.")
+            st.rerun()
 
 balance = get_leave_balance(employee_id)
 annual_days = float(balance["annual_leave_days"]) if balance else 21.0
 used_annual_days = float(get_used_annual_leave_days(employee_id))
 remaining_annual_days = annual_days - used_annual_days
 
-st.markdown(
-    f"""
-    <div class="card">
-        <div style="font-size: 20px; font-weight: 700; margin-bottom: 10px;">
-            Rezumat concedii
-        </div>
-        <div>CO disponibil total: <b>{annual_days:.2f}</b> zile</div>
-        <div>CO folosit: <b>{used_annual_days:.2f}</b> zile</div>
-        <div>CO rămas: <b>{remaining_annual_days:.2f}</b> zile</div>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+page_left, page_col, page_right = st.columns([0.25, 2.5, 0.25])
 
-leave_summary = get_leave_summary(employee_id)
+with page_col:
+    st.markdown(
+        "<div style='font-size: 28px; font-weight: 700;'>Situație angajat</div>",
+        unsafe_allow_html=True
+    )
 
-if leave_summary:
-    for row in leave_summary:
-        st.write(
-            f"{row['month']} - {row['entry_type']}: {row['total_days']} zile"
-        )
-else:
-    st.write("Nu există concedii înregistrate.")
+    if admin_mode:
+        entries = get_all_entries_for_admin()
+    else:
+        entries = get_entries_for_employee(employee_id)
 
-st.markdown(
-    "<div style='font-size: 28px; font-weight: 700;'>Situație angajat</div>",
-    unsafe_allow_html=True
-)
+    if not entries:
+        st.write("Nu există intrări.")
 
-if admin_mode:
-    entries = get_all_entries_for_admin()
-else:
-    entries = get_entries_for_employee(employee_id)
+    # Grupăm intrările pe lună
+    entries_by_month = {}
 
-if not entries:
-    st.write("Nu există intrări.")
+    for entry in entries:
+        month_key = entry["entry_date"][:7]  # exemplu: 2026-06
 
-# Grupăm intrările pe lună
-entries_by_month = {}
+        if month_key not in entries_by_month:
+            entries_by_month[month_key] = []
 
-for entry in entries:
-    month_key = entry["entry_date"][:7]  # exemplu: 2026-06
-
-    if month_key not in entries_by_month:
-        entries_by_month[month_key] = []
-
-    entries_by_month[month_key].append(entry)
+        entries_by_month[month_key].append(entry)
 
 
-for month_key, month_entries in entries_by_month.items():
-    month_label = format_month_ro(month_key)
+    for month_key, month_entries in entries_by_month.items():
+        month_label = format_month_ro(month_key)
 
-    st.subheader(month_label)
+        st.subheader(month_label)
 
-    # -----------------------------
-    # ÎNVOIRI
-    # -----------------------------
+        # -----------------------------
+        # ÎNVOIRI
+        # -----------------------------
 
-    invoiri = [
-        entry for entry in month_entries
-        if entry["entry_type"] == "Învoire"
-    ]
-
-    if invoiri:
-        st.markdown(
-            f"<div style='font-size: 22px; font-weight: 700; margin-top: 16px; margin-bottom: 8px;'>Învoire - {month_label}</div>",
-            unsafe_allow_html=True
-        )
-
-    for entry in invoiri:
-        if admin_mode:
-            st.write(f"Angajat: {entry['employee_name']} ({entry['employee_username']})")
-
-        st.write(f"Data plecării: {entry['entry_date']}")
-
-        st.write(f"Ore de recuperat: {entry['hours']}")
-
-        if entry["description"]:
-            st.write(f"Observații: {entry['description']}")
-
-        recovery_hours = get_hours_for_entry(entry["id"])
-
-        entry_date_display = datetime.fromisoformat(entry["entry_date"]).date()
-        entry_date_label = entry_date_display.strftime("%d.%m.%Y")
-
-        recovered_hours = [h for h in recovery_hours if h["is_recovered"] == 1]
-        unrecovered_hours = [h for h in recovery_hours if h["is_recovered"] == 0]
-
-        recovered_count = len(recovered_hours)
-        total_count = len(recovery_hours)
-
-        col_minus, col_display, col_plus = st.columns([0.7, 5, 0.7])
-
-        with col_minus:
-            st.write("")
-            if st.button(
-                "−",
-                key=f"minus_recovery_{entry['id']}",
-                disabled=(recovered_count == 0),
-                use_container_width=True
-            ):
-                last_recovered_hour = recovered_hours[-1]
-                unmark_hour_recovered(last_recovered_hour["id"])
-                st.rerun()
-
-        with col_display:
-            if recovered_count == total_count:
-                st.success(
-                    f"{entry_date_label} - {recovered_count}/{total_count} recuperate"
-                )
-            elif recovered_count == 0:
-                st.warning(
-                    f"{entry_date_label} - {recovered_count}/{total_count} recuperate"
-                )
-            else:
-                st.info(
-                    f"{entry_date_label} - {recovered_count}/{total_count} recuperate"
-                )
-
-        with col_plus:
-            st.write("")
-            if st.button(
-                "+",
-                key=f"plus_recovery_{entry['id']}",
-                disabled=(recovered_count == total_count),
-                use_container_width=True
-            ):
-                next_unrecovered_hour = unrecovered_hours[0]
-                mark_hour_recovered(next_unrecovered_hour["id"])
-                st.rerun()
-
-        if admin_mode:
-            if st.button("Șterge învoirea", key=f"delete_invoire_{entry['id']}"):
-                soft_delete_entry(entry["id"])
-                st.rerun()
-
-        st.divider()
-
-    # -----------------------------
-    # CONCEDII GRUPATE PE TIP
-    # -----------------------------
-
-    leave_types_in_month = [
-        "Concediu odihnă",
-        "Concediu medical",
-        "Concediu fără plată"
-    ]
-
-    for leave_type in leave_types_in_month:
-        leave_entries = [
+        invoiri = [
             entry for entry in month_entries
-            if entry["entry_type"] == leave_type
+            if entry["entry_type"] == "Învoire"
         ]
 
-        if not leave_entries:
-            continue
+        if invoiri:
+            st.markdown(
+                f"<div style='font-size: 22px; font-weight: 700; margin-top: 16px; margin-bottom: 8px;'>Învoire - {month_label}</div>",
+                unsafe_allow_html=True
+            )
 
-        total_days = sum(float(entry["leave_days"]) for entry in leave_entries)
-
-        st.markdown(
-            f"<div style='font-size: 22px; font-weight: 700; margin-top: 16px; margin-bottom: 8px;'>{leave_type} - {month_label}</div>",
-            unsafe_allow_html=True
-        )
-
-        st.write(f"Total zile: {total_days:.2f}")
-
-        for entry in leave_entries:
+        for entry in invoiri:
             if admin_mode:
                 st.write(f"Angajat: {entry['employee_name']} ({entry['employee_username']})")
 
-            start_date = datetime.fromisoformat(entry["entry_date"]).date()
+            st.write(f"Data plecării: {entry['entry_date']}")
 
-            if entry["end_date"]:
-                end_date = datetime.fromisoformat(entry["end_date"]).date()
-                interval_text = f"Interval: {start_date.strftime('%d.%m.%Y')} - {end_date.strftime('%d.%m.%Y')}"
-            else:
-                end_date = start_date + timedelta(days=1)
-                interval_text = f"Data: {start_date.strftime('%d.%m.%Y')}"
-
-            col1, col2, col3 = st.columns([4, 2, 2])
-
-            with col1:
-                st.write(interval_text)
-
-            with col2:
-                st.write(f"{float(entry['leave_days']):.2f} zile")
-
-            with col3:
-                if admin_mode:
-                    if st.button("Șterge", key=f"delete_leave_{entry['id']}"):
-                        soft_delete_entry(entry["id"])
-                        st.rerun()
-                else:
-                    st.write("")
+            st.write(f"Ore de recuperat: {entry['hours']}")
 
             if entry["description"]:
-                st.caption(f"Observații: {entry['description']}")
+                st.write(f"Observații: {entry['description']}")
+
+            recovery_hours = get_hours_for_entry(entry["id"])
+
+            entry_date_display = datetime.fromisoformat(entry["entry_date"]).date()
+            entry_date_label = entry_date_display.strftime("%d.%m.%Y")
+
+            recovered_hours = [h for h in recovery_hours if h["is_recovered"] == 1]
+            unrecovered_hours = [h for h in recovery_hours if h["is_recovered"] == 0]
+
+            recovered_count = len(recovered_hours)
+            total_count = len(recovery_hours)
+
+            col_minus, col_display, col_plus = st.columns([0.7, 5, 0.7])
+
+            with col_minus:
+                st.write("")
+                if st.button(
+                    "−",
+                    key=f"minus_recovery_{entry['id']}",
+                    disabled=(recovered_count == 0),
+                    use_container_width=True
+                ):
+                    last_recovered_hour = recovered_hours[-1]
+                    unmark_hour_recovered(last_recovered_hour["id"])
+                    st.rerun()
+
+            with col_display:
+                if recovered_count == total_count:
+                    st.success(
+                        f"{entry_date_label} - {recovered_count}/{total_count} recuperate"
+                    )
+                elif recovered_count == 0:
+                    st.warning(
+                        f"{entry_date_label} - {recovered_count}/{total_count} recuperate"
+                    )
+                else:
+                    st.info(
+                        f"{entry_date_label} - {recovered_count}/{total_count} recuperate"
+                    )
+
+            with col_plus:
+                st.write("")
+                if st.button(
+                    "+",
+                    key=f"plus_recovery_{entry['id']}",
+                    disabled=(recovered_count == total_count),
+                    use_container_width=True
+                ):
+                    next_unrecovered_hour = unrecovered_hours[0]
+                    mark_hour_recovered(next_unrecovered_hour["id"])
+                    st.rerun()
 
             if admin_mode:
-                with st.expander(f"Admin - modifică intervalul {start_date.strftime('%d.%m.%Y')}"):
-                    new_date = st.date_input(
-                        "Data început",
-                        value=start_date,
-                        key=f"edit_date_{entry['id']}"
-                    )
+                if st.button("Șterge învoirea", key=f"delete_invoire_{entry['id']}"):
+                    soft_delete_entry(entry["id"])
+                    st.rerun()
 
-                    new_end_date = st.date_input(
-                        "Data întoarcerii",
-                        value=end_date,
-                        key=f"edit_end_date_{entry['id']}"
-                    )
+            st.divider()
 
-                    new_type = st.selectbox(
-                        "Tip concediu",
-                        ["Concediu odihnă", "Concediu medical", "Concediu fără plată"],
-                        index=["Concediu odihnă", "Concediu medical", "Concediu fără plată"].index(entry["entry_type"]),
-                        key=f"edit_type_{entry['id']}"
-                    )
+        # -----------------------------
+        # CONCEDII GRUPATE PE TIP
+        # -----------------------------
 
-                    calculated_new_days = count_business_days(new_date, new_end_date)
+        leave_types_in_month = [
+            "Concediu odihnă",
+            "Concediu medical",
+            "Concediu fără plată"
+        ]
 
-                    st.info(
-                        f"Zile calculate automat, fără weekend: {calculated_new_days:.2f}"
-                    )
+        for leave_type in leave_types_in_month:
+            leave_entries = [
+                entry for entry in month_entries
+                if entry["entry_type"] == leave_type
+            ]
 
-                    new_days = st.number_input(
-                        "Zile scăzute",
-                        min_value=0.0,
-                        max_value=31.0,
-                        value=float(calculated_new_days),
-                        step=0.25,
-                        format="%.2f",
-                        key=f"edit_days_{entry['id']}_{new_date}_{new_end_date}"
-                    )
+            if not leave_entries:
+                continue
 
-                    new_description = st.text_area(
-                        "Observații",
-                        value=entry["description"] or "",
-                        key=f"edit_description_{entry['id']}"
-                    )
+            total_days = sum(float(entry["leave_days"]) for entry in leave_entries)
 
-                    if st.button("Salvează modificarea", key=f"save_override_{entry['id']}"):
-                        update_leave_entry(
-                            entry["id"],
-                            new_date,
-                            new_end_date,
-                            new_type,
-                            float(new_days),
-                            new_description
+            st.markdown(
+                f"<div style='font-size: 22px; font-weight: 700; margin-top: 16px; margin-bottom: 8px;'>{leave_type} - {month_label}</div>",
+                unsafe_allow_html=True
+            )
+
+            st.write(f"Total zile: {total_days:.2f}")
+
+            for entry in leave_entries:
+                if admin_mode:
+                    st.write(f"Angajat: {entry['employee_name']} ({entry['employee_username']})")
+
+                start_date = datetime.fromisoformat(entry["entry_date"]).date()
+
+                if entry["end_date"]:
+                    end_date = datetime.fromisoformat(entry["end_date"]).date()
+                    interval_text = f"Interval: {start_date.strftime('%d.%m.%Y')} - {end_date.strftime('%d.%m.%Y')}"
+                else:
+                    end_date = start_date + timedelta(days=1)
+                    interval_text = f"Data: {start_date.strftime('%d.%m.%Y')}"
+
+                col1, col2, col3 = st.columns([4, 2, 2])
+
+                with col1:
+                    st.write(interval_text)
+
+                with col2:
+                    st.write(f"{float(entry['leave_days']):.2f} zile")
+
+                with col3:
+                    if admin_mode:
+                        if st.button("Șterge", key=f"delete_leave_{entry['id']}"):
+                            soft_delete_entry(entry["id"])
+                            st.rerun()
+                    else:
+                        st.write("")
+
+                if entry["description"]:
+                    st.caption(f"Observații: {entry['description']}")
+
+                if admin_mode:
+                    with st.expander(f"Admin - modifică intervalul {start_date.strftime('%d.%m.%Y')}"):
+                        new_date = st.date_input(
+                            "Data început",
+                            value=start_date,
+                            key=f"edit_date_{entry['id']}"
                         )
-                        st.success("Concediul a fost modificat.")
-                        st.rerun()
 
-        st.divider()
+                        new_end_date = st.date_input(
+                            "Data întoarcerii",
+                            value=end_date,
+                            key=f"edit_end_date_{entry['id']}"
+                        )
+
+                        new_type = st.selectbox(
+                            "Tip concediu",
+                            ["Concediu odihnă", "Concediu medical", "Concediu fără plată"],
+                            index=["Concediu odihnă", "Concediu medical", "Concediu fără plată"].index(entry["entry_type"]),
+                            key=f"edit_type_{entry['id']}"
+                        )
+
+                        calculated_new_days = count_business_days(new_date, new_end_date)
+
+                        st.info(
+                            f"Zile calculate automat, fără weekend: {calculated_new_days:.2f}"
+                        )
+
+                        new_days = st.number_input(
+                            "Zile scăzute",
+                            min_value=0.0,
+                            max_value=31.0,
+                            value=float(calculated_new_days),
+                            step=0.25,
+                            format="%.2f",
+                            key=f"edit_days_{entry['id']}_{new_date}_{new_end_date}"
+                        )
+
+                        new_description = st.text_area(
+                            "Observații",
+                            value=entry["description"] or "",
+                            key=f"edit_description_{entry['id']}"
+                        )
+
+                        if st.button("Salvează modificarea", key=f"save_override_{entry['id']}"):
+                            update_leave_entry(
+                                entry["id"],
+                                new_date,
+                                new_end_date,
+                                new_type,
+                                float(new_days),
+                                new_description
+                            )
+                            st.success("Concediul a fost modificat.")
+                            st.rerun()
+
+            st.divider()
         
 # -----------------------------
 # EXPORT
