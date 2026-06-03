@@ -6,8 +6,11 @@ import math
 from io import BytesIO
 import os, hashlib
 import locale
+import psycopg2
+import libsql
 
-DB_NAME = "leave_tracker.db"
+
+#DB_NAME = "leave_tracker.db"
 
 RECOVERABLE_TYPES = ["Învoire"]
 
@@ -257,8 +260,21 @@ def format_month_ro(month_key):
     year, month = month_key.split("-")
     return f"{months[month]} {year}"
 
+# def get_connection():
+#     return sqlite3.connect(DB_NAME)
+
 def get_connection():
-    return sqlite3.connect(DB_NAME)
+    turso_url = st.secrets.get("TURSO_DATABASE_URL", "")
+    turso_token = st.secrets.get("TURSO_AUTH_TOKEN", "")
+
+    if turso_url and turso_token:
+        return libsql.connect(
+            turso_url,
+            auth_token=turso_token
+        )
+
+    st.error("Baza Turso nu este configurată. Lipsesc TURSO_DATABASE_URL sau TURSO_AUTH_TOKEN.")
+    st.stop()
 
 def init_db():
     conn = get_connection()
@@ -266,7 +282,7 @@ def init_db():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS employees (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER PRIMARY KEY ,
             username TEXT UNIQUE,
             name TEXT NOT NULL,
             position TEXT,
@@ -300,7 +316,7 @@ def init_db():
       
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS entries (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER PRIMARY KEY ,
             employee_id INTEGER NOT NULL,
             entry_date TEXT NOT NULL,
             end_date TEXT,
@@ -316,7 +332,7 @@ def init_db():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS recovery_hours (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER PRIMARY KEY ,
             entry_id INTEGER NOT NULL,
             hour_index INTEGER NOT NULL,
             is_recovered INTEGER DEFAULT 0,
@@ -327,7 +343,7 @@ def init_db():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS leave_balances (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER PRIMARY KEY ,
             employee_id INTEGER NOT NULL UNIQUE,
             annual_leave_days REAL DEFAULT 21,
             FOREIGN KEY (employee_id) REFERENCES employees(id)
@@ -362,7 +378,7 @@ def init_db():
     if len(balance_columns) == 0:
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS leave_balances (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id INTEGER PRIMARY KEY ,
                 employee_id INTEGER NOT NULL UNIQUE,
                 annual_leave_days REAL DEFAULT 21.0,
                 FOREIGN KEY (employee_id) REFERENCES employees(id)
@@ -1037,6 +1053,11 @@ st.markdown(
 
 
 init_db()
+
+if "TURSO_DATABASE_URL" in st.secrets:
+    st.sidebar.success("DB: Turso")
+else:
+    st.sidebar.error("DB: SQLite local / Turso lipsă")
 
 try:
     locale.setlocale(locale.LC_TIME, "ro_RO.UTF-8")
