@@ -108,6 +108,8 @@ def update_user_pin(employee_id, new_pin):
     conn.commit()
     conn.close()
 
+    st.cache_data.clear()
+
     return rows_updated == 1
 
 def has_overlapping_leave(employee_id, start_date, end_date, exclude_entry_id=None):
@@ -134,6 +136,8 @@ def has_overlapping_leave(employee_id, start_date, end_date, exclude_entry_id=No
 
     existing_entries = rows_to_dicts(cursor, cursor.fetchall())
     conn.close()
+
+    st.cache_data.clear()
 
     for existing in existing_entries:
         existing_start = datetime.fromisoformat(existing["entry_date"]).date()
@@ -190,6 +194,8 @@ def has_conflicting_entry(employee_id, new_start, new_end, exclude_entry_id=None
 
     existing_entries = cursor.fetchall()
     conn.close()
+
+    st.cache_data.clear()
 
     for existing in existing_entries:
         existing_start, existing_end = get_entry_interval(existing)
@@ -414,6 +420,9 @@ def init_db():
     conn.commit()
     conn.close()
 
+    st.cache_data.clear()
+
+@st.cache_data(ttl=30)
 def get_employee_by_username(username):
     conn = get_connection()
     cursor = conn.cursor()
@@ -428,8 +437,11 @@ def get_employee_by_username(username):
     employee = row_to_dict(cursor, row)
 
     conn.close()
+
+    st.cache_data.clear()
     return employee
 
+@st.cache_data(ttl=30)
 def get_people_off_on_date(target_date):
     conn = get_connection()
     cursor = conn.cursor()
@@ -467,6 +479,8 @@ def get_people_off_on_date(target_date):
 
     rows = rows_to_dicts(cursor, cursor.fetchall())
     conn.close()
+
+    st.cache_data.clear()
     return rows
 
 def create_employee(username, full_name, position, role, pin):
@@ -498,6 +512,8 @@ def create_employee(username, full_name, position, role, pin):
 
     conn.commit()
     conn.close()
+
+    st.cache_data.clear()
 
 def add_entry(employee_id, entry_date, end_date, entry_type, hours, leave_days, description):
     conn = get_connection()
@@ -547,7 +563,9 @@ def add_entry(employee_id, entry_date, end_date, entry_type, hours, leave_days, 
     conn.commit()
     conn.close()
 
+    st.cache_data.clear()
 
+@st.cache_data(ttl=30)
 def get_entries_for_employee(employee_id):
     conn = get_connection()
     cursor = conn.cursor()
@@ -562,8 +580,11 @@ def get_entries_for_employee(employee_id):
 
     entries = rows_to_dicts(cursor, cursor.fetchall())
     conn.close()
+
+    st.cache_data.clear()
     return entries
 
+@st.cache_data(ttl=30)
 def get_all_entries_for_admin():
     conn = get_connection()
     cursor = conn.cursor()
@@ -582,8 +603,11 @@ def get_all_entries_for_admin():
 
     entries = rows_to_dicts(cursor, cursor.fetchall())
     conn.close()
+
+    st.cache_data.clear()
     return entries
 
+@st.cache_data(ttl=30)
 def get_hours_for_entry(entry_id):
     conn = get_connection()
     cursor = conn.cursor()
@@ -597,6 +621,8 @@ def get_hours_for_entry(entry_id):
 
     hours = rows_to_dicts(cursor, cursor.fetchall())
     conn.close()
+
+    st.cache_data.clear()
     return hours
 
 
@@ -617,6 +643,8 @@ def mark_hour_recovered(hour_id):
     conn.commit()
     conn.close()
 
+    st.cache_data.clear()
+
 
 def unmark_hour_recovered(hour_id):
     conn = get_connection()
@@ -632,6 +660,8 @@ def unmark_hour_recovered(hour_id):
     conn.commit()
     conn.close()
 
+    st.cache_data.clear()
+
 
 def soft_delete_entry(entry_id):
     conn = get_connection()
@@ -646,6 +676,9 @@ def soft_delete_entry(entry_id):
     conn.commit()
     conn.close()
 
+    st.cache_data.clear()
+
+@st.cache_data(ttl=30)
 def get_leave_balance(employee_id):
     conn = get_connection()
     cursor = conn.cursor()
@@ -660,6 +693,8 @@ def get_leave_balance(employee_id):
     balance = row_to_dict(cursor, row)
 
     conn.close()
+
+    st.cache_data.clear()
     return balance
 
 
@@ -677,7 +712,9 @@ def update_annual_leave_days(employee_id, annual_leave_days):
     conn.commit()
     conn.close()
 
+    st.cache_data.clear()
 
+@st.cache_data(ttl=30)
 def get_leave_summary(employee_id):
     conn = get_connection()
     cursor = conn.cursor()
@@ -697,9 +734,11 @@ def get_leave_summary(employee_id):
 
     rows = rows_to_dicts(cursor, cursor.fetchall())
     conn.close()
+
+    st.cache_data.clear()
     return rows
 
-
+@st.cache_data(ttl=30)
 def get_used_annual_leave_days(employee_id):
     conn = get_connection()
     cursor = conn.cursor()
@@ -714,6 +753,8 @@ def get_used_annual_leave_days(employee_id):
 
     used_days = float(cursor.fetchone()[0])
     conn.close()
+
+    st.cache_data.clear()
     return used_days
 
 
@@ -742,6 +783,9 @@ def update_leave_entry(entry_id, entry_date, end_date, entry_type, leave_days, d
     conn.commit()
     conn.close()
 
+    st.cache_data.clear()
+
+@st.cache_data(ttl=30)
 def get_export_data(employee_id):
     conn = get_connection()
 
@@ -768,8 +812,11 @@ def get_export_data(employee_id):
     """, conn, params=(employee_id,))
 
     conn.close()
+
+    st.cache_data.clear()
     return df
 
+@st.cache_data(ttl=30)
 def get_all_users_table():
     conn = get_connection()
 
@@ -807,6 +854,8 @@ def get_all_users_table():
     """, conn)
 
     conn.close()
+
+    st.cache_data.clear()
 
     df["zile_co_disponibile"] = df["zile_co_disponibile"].astype(float)
     df["zile_co_folosite"] = df["zile_co_folosite"].astype(float)
@@ -850,7 +899,10 @@ def update_leave_balances_from_table(edited_df):
 
     conn.commit()
     conn.close()
+
+    st.cache_data.clear()
     
+@st.cache_data(ttl=30)
 def get_full_report_data(start_date, end_date):
     conn = get_connection()
 
@@ -894,6 +946,8 @@ def get_full_report_data(start_date, end_date):
     ))
 
     conn.close()
+
+    st.cache_data.clear()
     return df
 
 # -----------------------------
@@ -1483,7 +1537,8 @@ if admin_mode:
         key="report_end_date"
     )
 
-    if report_end_date >= report_start_date:
+if report_end_date >= report_start_date:
+    if st.sidebar.button("Generează raport general", use_container_width=True):
         report_df = get_full_report_data(
             report_start_date,
             report_end_date
@@ -1508,7 +1563,7 @@ if admin_mode:
                 )
 
             st.sidebar.download_button(
-                label="Raport general",
+                label="Descarcă raport general",
                 data=output.getvalue(),
                 file_name=f"raport_general_{report_start_date}_{report_end_date}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -1516,8 +1571,8 @@ if admin_mode:
             )
         else:
             st.sidebar.info("Nu există date pentru interval.")
-    else:
-        st.sidebar.error("Interval invalid.")
+else:
+    st.sidebar.error("Interval invalid.")
 
 # -----------------------------
 # ADD NEW ENTRY
@@ -2013,20 +2068,21 @@ for month_key, month_entries in entries_by_month.items():
 
 st.sidebar.markdown("### Export")
 
-df_export = get_export_data(employee_id)
+if st.sidebar.button("Generează raport utilizator curent", use_container_width=True):
+    df_export = get_export_data(employee_id)
 
-if not df_export.empty:
-    output = BytesIO()
+    if not df_export.empty:
+        output = BytesIO()
 
-    with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        df_export.to_excel(writer, index=False, sheet_name="Situatie")
+        with pd.ExcelWriter(output, engine="openpyxl") as writer:
+            df_export.to_excel(writer, index=False, sheet_name="Situatie")
 
-    st.sidebar.download_button(
-        label="Raport utilizator curent",
-        data=output.getvalue(),
-        file_name=f"situatie_{employee_name.strip()}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        use_container_width=True
-    )
-else:
-    st.sidebar.write("Nu există date pentru export.")
+        st.sidebar.download_button(
+            label="Descarcă raport utilizator curent",
+            data=output.getvalue(),
+            file_name=f"situatie_{employee_name.strip()}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True
+        )
+    else:
+        st.sidebar.write("Nu există date pentru export.")
