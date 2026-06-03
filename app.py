@@ -2206,10 +2206,11 @@ with page_col:
                     reverse=True
                 )
 
-        page_left, page_col, page_right = st.columns([0.25, 2.5, 0.25])
+            if invoiri and concedii:
+                inner_left, inner_mid, inner_right = st.columns([0.03, 0.94, 0.03])
 
-        with page_col:
-            st.divider()
+                with inner_mid:
+                    st.divider()
 
             if concedii:
                 st.markdown(
@@ -2247,10 +2248,8 @@ with page_col:
                     st.markdown(
                         f"**{float(entry['leave_days']):.2f} zile**"
                     )
-page_left, page_col, page_right = st.columns([0.25, 2.5, 0.25])
+st.divider()
 
-with page_col:
-    st.divider()
 
 
 st.sidebar.markdown("### Export")
