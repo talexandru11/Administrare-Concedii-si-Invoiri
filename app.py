@@ -111,12 +111,7 @@ def update_user_pin(employee_id, new_pin):
     return rows_updated == 1
 
 def has_overlapping_leave(employee_id, start_date, end_date, exclude_entry_id=None):
-    """
-    Verifică dacă intervalul nou se suprapune cu alt concediu existent.
-    Intervalele sunt tratate ca [start_date, end_date), adică end_date exclusiv.
-    """
     conn = get_connection()
-    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
     if exclude_entry_id is None:
@@ -137,7 +132,7 @@ def has_overlapping_leave(employee_id, start_date, end_date, exclude_entry_id=No
               AND entry_type IN ('Concediu odihnă', 'Concediu medical', 'Concediu fără plată')
         """, (employee_id, exclude_entry_id))
 
-    existing_entries = cursor.fetchall()
+    existing_entries = rows_to_dicts(cursor, cursor.fetchall())
     conn.close()
 
     for existing in existing_entries:
@@ -160,41 +155,6 @@ def get_entry_interval(entry):
         end = get_leave_end_date(entry)
 
     return start, end
-
-
-def has_conflicting_entry(employee_id, new_start, new_end, exclude_entry_id=None):
-    conn = get_connection()
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-
-    if exclude_entry_id is None:
-        cursor.execute("""
-            SELECT *
-            FROM entries
-            WHERE employee_id = ?
-              AND deleted = 0
-        """, (employee_id,))
-    else:
-        cursor.execute("""
-            SELECT *
-            FROM entries
-            WHERE employee_id = ?
-              AND deleted = 0
-              AND id != ?
-        """, (employee_id, exclude_entry_id))
-
-    existing_entries = cursor.fetchall()
-    conn.close()
-
-    for existing in existing_entries:
-        existing_start, existing_end = get_entry_interval(existing)
-
-        overlaps = new_start < existing_end and new_end > existing_start
-
-        if overlaps:
-            return True, existing, existing_start, existing_end
-
-    return False, None, None, None
 
 def get_entry_interval(entry):
     start = datetime.fromisoformat(entry["entry_date"]).date()
@@ -275,6 +235,18 @@ def get_connection():
 
     st.error("Baza Turso nu este configurată. Lipsesc TURSO_DATABASE_URL sau TURSO_AUTH_TOKEN.")
     st.stop()
+
+def rows_to_dicts(cursor, rows):
+    columns = [col[0] for col in cursor.description]
+    return [dict(zip(columns, row)) for row in rows]
+
+
+def row_to_dict(cursor, row):
+    if row is None:
+        return None
+
+    columns = [col[0] for col in cursor.description]
+    return dict(zip(columns, row))
 
 def init_db():
     conn = get_connection()
@@ -444,7 +416,6 @@ def init_db():
 
 def get_employee_by_username(username):
     conn = get_connection()
-    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -453,13 +424,14 @@ def get_employee_by_username(username):
         WHERE lower(username) = lower(?)
     """, (username.strip(),))
 
-    employee = cursor.fetchone()
+    row = cursor.fetchone()
+    employee = row_to_dict(cursor, row)
+
     conn.close()
     return employee
 
 def get_people_off_on_date(target_date):
     conn = get_connection()
-    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -493,7 +465,7 @@ def get_people_off_on_date(target_date):
         str(target_date)
     ))
 
-    rows = cursor.fetchall()
+    rows = rows_to_dicts(cursor, cursor.fetchall())
     conn.close()
     return rows
 
@@ -578,7 +550,6 @@ def add_entry(employee_id, entry_date, end_date, entry_type, hours, leave_days, 
 
 def get_entries_for_employee(employee_id):
     conn = get_connection()
-    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -589,13 +560,12 @@ def get_entries_for_employee(employee_id):
         ORDER BY entry_date DESC, id DESC
     """, (employee_id,))
 
-    entries = cursor.fetchall()
+    entries = rows_to_dicts(cursor, cursor.fetchall())
     conn.close()
     return entries
 
 def get_all_entries_for_admin():
     conn = get_connection()
-    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -610,13 +580,12 @@ def get_all_entries_for_admin():
         ORDER BY e.entry_date DESC, e.id DESC
     """)
 
-    entries = cursor.fetchall()
+    entries = rows_to_dicts(cursor, cursor.fetchall())
     conn.close()
     return entries
 
 def get_hours_for_entry(entry_id):
     conn = get_connection()
-    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -626,7 +595,7 @@ def get_hours_for_entry(entry_id):
         ORDER BY hour_index
     """, (entry_id,))
 
-    hours = cursor.fetchall()
+    hours = rows_to_dicts(cursor, cursor.fetchall())
     conn.close()
     return hours
 
@@ -679,7 +648,6 @@ def soft_delete_entry(entry_id):
 
 def get_leave_balance(employee_id):
     conn = get_connection()
-    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -689,8 +657,10 @@ def get_leave_balance(employee_id):
     """, (employee_id,))
 
     row = cursor.fetchone()
+    balance = row_to_dict(cursor, row)
+
     conn.close()
-    return row
+    return balance
 
 
 def update_annual_leave_days(employee_id, annual_leave_days):
@@ -710,7 +680,6 @@ def update_annual_leave_days(employee_id, annual_leave_days):
 
 def get_leave_summary(employee_id):
     conn = get_connection()
-    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -726,7 +695,7 @@ def get_leave_summary(employee_id):
         ORDER BY month DESC, entry_type
     """, (employee_id,))
 
-    rows = cursor.fetchall()
+    rows = rows_to_dicts(cursor, cursor.fetchall())
     conn.close()
     return rows
 
