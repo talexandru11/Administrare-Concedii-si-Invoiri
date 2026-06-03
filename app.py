@@ -14,7 +14,7 @@ except ImportError:
 
 DB_NAME = "leave_tracker.db"
 
-RECOVERABLE_TYPES = ["Invoire"]
+RECOVERABLE_TYPES = ["invoire"]
 
 LEAVE_TYPES = [
     "Concediu odihna",
@@ -155,7 +155,7 @@ def has_overlapping_leave(employee_id, start_date, end_date, exclude_entry_id=No
 def get_entry_interval(entry):
     start = datetime.fromisoformat(entry["entry_date"]).date()
 
-    if entry["entry_type"] == "Invoire":
+    if entry["entry_type"] == "invoire":
         end = start + timedelta(days=1)
     else:
         end = get_leave_end_date(entry)
@@ -165,7 +165,7 @@ def get_entry_interval(entry):
 def get_entry_interval(entry):
     start = datetime.fromisoformat(entry["entry_date"]).date()
 
-    if entry["entry_type"] == "Invoire":
+    if entry["entry_type"] == "invoire":
         end = start + timedelta(days=1)
     else:
         end = get_leave_end_date(entry)
@@ -479,7 +479,7 @@ def get_people_off_on_date(target_date):
                 )
                 OR
                 (
-                    e.entry_type = 'Invoire'
+                    e.entry_type = 'invoire'
                     AND e.entry_date = ?
                 )
           )
@@ -673,7 +673,7 @@ def add_entry(employee_id, entry_date, end_date, entry_type, hours, leave_days, 
     conn = get_connection()
     cursor = conn.cursor()
 
-    if entry_type == "Invoire":
+    if entry_type == "invoire":
         final_hours = int(hours)
         final_leave_days = 0.0
         final_end_date = None
@@ -707,7 +707,7 @@ def add_entry(employee_id, entry_date, end_date, entry_type, hours, leave_days, 
 
     entry_id = cursor.lastrowid
 
-    if entry_type == "Invoire":
+    if entry_type == "invoire":
         for i in range(1, final_hours + 1):
             cursor.execute("""
                 INSERT INTO recovery_hours (entry_id, hour_index, is_recovered)
@@ -1081,7 +1081,7 @@ def get_full_report_data(start_date, end_date):
             AND e.deleted = 0
             AND (
                 (
-                    e.entry_type = 'Invoire'
+                    e.entry_type = 'invoire'
                     AND e.entry_date BETWEEN ? AND ?
                 )
                 OR
@@ -1381,7 +1381,7 @@ with st.sidebar.expander("Cine are liber azi", expanded=True):
         for person in people_off_today:
             start_date = datetime.fromisoformat(person["entry_date"]).date()
 
-            if person["entry_type"] == "Invoire":
+            if person["entry_type"] == "invoire":
                 st.markdown(
                     f"""
                     <div style="
@@ -1391,7 +1391,7 @@ with st.sidebar.expander("Cine are liber azi", expanded=True):
                         <b>{person['name']}</b><br>
                         <span style="font-size: 13px; opacity: 0.75;">
                             {person['position'] or 'Fara pozitie'}<br>
-                            Invoire - {person['hours']} ore<br>
+                            invoire - {person['hours']} ore<br>
                             {start_date.strftime('%d.%m.%Y')}
                         </span>
                     </div>
@@ -1859,7 +1859,7 @@ with page_col:
         leave_days = 0.0
         end_date = None
 
-        if entry_type == "Invoire":
+        if entry_type == "invoire":
             hours = st.number_input(
                 "Ore de recuperat",
                 min_value=1,
@@ -1909,7 +1909,7 @@ with page_col:
         if st.button("Salveaza intrarea", key="save_entry_button"):
             overdraw = False
 
-            if entry_type == "Invoire":
+            if entry_type == "invoire":
                 new_start = entry_date
                 new_end = entry_date + timedelta(days=1)
             else:
@@ -2052,7 +2052,7 @@ with page_col:
 
         invoiri = [
             entry for entry in month_entries
-            if entry["entry_type"] == "Invoire"
+            if entry["entry_type"] == "invoire"
         ]
 
         if invoiri:
@@ -2124,7 +2124,7 @@ with page_col:
                     st.rerun()
 
             if admin_mode:
-                if st.button("sterge Invoirea", key=f"delete_invoire_{entry['id']}"):
+                if st.button("Sterge invoirea", key=f"delete_invoire_{entry['id']}"):
                     soft_delete_entry(entry["id"])
                     st.rerun()
 
