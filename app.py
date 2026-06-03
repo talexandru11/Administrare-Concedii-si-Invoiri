@@ -1844,14 +1844,14 @@ page_left, page_col, page_right = st.columns([0.25, 2.5, 0.25])
 with page_col:
     with st.expander("Adauga intrare noua", expanded=False):
 
-        with st.form(key=f"form_add_entry_{target_employee_id}"):
-            entry_type = st.selectbox(
-                "Tip intrare",
-                ["Invoire", "Concediu odihna", "Concediu medical", "Concediu fara plata"],
-                key="entry_type_select",
-                accept_new_options=False
-            )
+        entry_type = st.selectbox(
+            "Tip intrare",
+            ["Invoire", "Concediu odihna", "Concediu medical", "Concediu fara plata"],
+            key="entry_type_select",
+            accept_new_options=False
+        )
 
+        with st.form(key=f"form_add_entry_{target_employee_id}_{entry_type}"):
             entry_date = st.date_input(
                 "Data plecarii",
                 key="entry_date_input"
@@ -1871,7 +1871,7 @@ with page_col:
                 )
             else:
                 end_date = st.date_input(
-                    "Data Intoarcerii",
+                    "Data intoarcerii",
                     value=entry_date + timedelta(days=1),
                     key="leave_end_date_input"
                 )
@@ -1909,9 +1909,6 @@ with page_col:
                 "Salveaza intrarea",
                 use_container_width=True
             )
-
-        if "confirm_overdraw" not in st.session_state:
-            st.session_state.confirm_overdraw = False
 
         if submitted_entry:
             overdraw = False
