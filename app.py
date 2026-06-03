@@ -2056,7 +2056,7 @@ with page_col:
 
         st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
 
-        c1, spacer1, c2, spacer2, c3 = st.columns([1, 1.1, 1, 1.1, 1])
+        c1, spacer1, c2, spacer2, c3 = st.columns([1, 1.3, 1, 1.3, 1])
 
         with c1:
             st.metric("CO disponibile", f"{annual_days:.2f}")
