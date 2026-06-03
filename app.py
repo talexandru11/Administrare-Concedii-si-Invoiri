@@ -2130,7 +2130,7 @@ with page_col:
                 employee_text = employee_name
 
             col_info, col_minus, col_status, col_plus, col_delete = st.columns(
-                [2.8, 0.7, 3.5, 0.7, 0.9],
+                [3, 0.7, 4, 0.7, 1],
                 vertical_alignment="center"
             )
 
@@ -2172,15 +2172,17 @@ with page_col:
                     mark_hour_recovered(next_unrecovered_hour["id"])
                     st.rerun()
 
-    with col_delete:
-        if admin_mode:
-            if st.button(
-                "sterge",
-                key=f"delete_Invoire_{entry['id']}",
-                use_container_width=True
-            ):
-                soft_delete_entry(entry["id"])
-                st.rerun()
+            with col_delete:
+                if admin_mode:
+                    if st.button(
+                        "sterge",
+                        key=f"delete_invoire_{entry['id']}",
+                        use_container_width=True
+                    ):
+                        soft_delete_entry(entry["id"])
+                        st.rerun()
+                else:
+                    st.empty()
 
     st.divider()
 
