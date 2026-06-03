@@ -2081,125 +2081,125 @@ with page_col:
 page_left, page_col, page_right = st.columns([0.25, 2.5, 0.25])
 
 with page_col:
-    if not entries:
-        st.write("Nu exista intrari.")
+        if not entries:
+            st.write("Nu exista intrari.")
 
-    entries_by_month = {}
+        entries_by_month = {}
 
-    for entry in entries:
-        month_key = entry["entry_date"][:7]
+        for entry in entries:
+            month_key = entry["entry_date"][:7]
 
-        if month_key not in entries_by_month:
-            entries_by_month[month_key] = []
+            if month_key not in entries_by_month:
+                entries_by_month[month_key] = []
 
-        entries_by_month[month_key].append(entry)
+            entries_by_month[month_key].append(entry)
 
-    for month_key in sorted(entries_by_month.keys(), reverse=True):
-        month_entries = entries_by_month[month_key]
-        month_label = format_month_ro(month_key)
+        for month_key in sorted(entries_by_month.keys(), reverse=True):
+            month_entries = entries_by_month[month_key]
+            month_label = format_month_ro(month_key)
 
-        st.subheader(month_label)
+            st.subheader(month_label)
 
-        # -----------------------------
-        # INVOIRI
-        # -----------------------------
+            # -----------------------------
+            # INVOIRI
+            # -----------------------------
 
-    invoiri = sorted(
-        [
-            entry for entry in month_entries
-            if entry["entry_type"] == "Invoire"
-        ],
-        key=lambda entry: entry["entry_date"],
-        reverse=True
-    )
-
-    if invoiri:
-        st.markdown(
-            f"<div style='font-size: 22px; font-weight: 700; margin-top: 16px; margin-bottom: 8px;'>"
-            f"Invoiri - {month_label}"
-            f"</div>",
-            unsafe_allow_html=True
+        invoiri = sorted(
+            [
+                entry for entry in month_entries
+                if entry["entry_type"] == "Invoire"
+            ],
+            key=lambda entry: entry["entry_date"],
+            reverse=True
         )
 
-    for entry in invoiri:
-        recovery_hours = get_hours_for_entry(entry["id"])
-
-        recovered_hours = [h for h in recovery_hours if h["is_recovered"] == 1]
-        unrecovered_hours = [h for h in recovery_hours if h["is_recovered"] == 0]
-
-        recovered_count = len(recovered_hours)
-        total_count = len(recovery_hours)
-
-        entry_date_display = datetime.fromisoformat(entry["entry_date"]).date()
-        entry_date_label = entry_date_display.strftime("%d.%m.%Y")
-
-        if admin_mode:
-            employee_text = f"{entry['employee_name']} ({entry['employee_username']})"
-        else:
-            employee_text = employee_name
-
-        col_info, col_minus, col_status, col_plus, col_delete = st.columns(
-            [3, 0.7, 4, 0.7, 1],
-            vertical_alignment="center"
-        )
-
-        with col_info:
-            desc_text = f" — {entry['description']}" if entry["description"] else ""
-
+        if invoiri:
             st.markdown(
-                f"**{employee_text}**  \n"
-                f"{entry_date_label} | {entry['hours']} ore{desc_text}"
+                f"<div style='font-size: 22px; font-weight: 700; margin-top: 16px; margin-bottom: 8px;'>"
+                f"Invoiri - {month_label}"
+                f"</div>",
+                unsafe_allow_html=True
             )
 
-        with col_minus:
-            if st.button(
-                "-",
-                key=f"minus_recovery_{entry['id']}",
-                disabled=(recovered_count == 0),
-                use_container_width=True
-            ):
-                last_recovered_hour = recovered_hours[-1]
-                unmark_hour_recovered(last_recovered_hour["id"])
-                st.rerun()
+        for entry in invoiri:
+            recovery_hours = get_hours_for_entry(entry["id"])
 
-        with col_status:
-            if recovered_count == total_count:
-                st.success(f"{entry_date_label} - {recovered_count}/{total_count} recuperate")
-            elif recovered_count == 0:
-                st.warning(f"{entry_date_label} - {recovered_count}/{total_count} recuperate")
-            else:
-                st.info(f"{entry_date_label} - {recovered_count}/{total_count} recuperate")
+            recovered_hours = [h for h in recovery_hours if h["is_recovered"] == 1]
+            unrecovered_hours = [h for h in recovery_hours if h["is_recovered"] == 0]
 
-        with col_plus:
-            if st.button(
-                "+",
-                key=f"plus_recovery_{entry['id']}",
-                disabled=(recovered_count == total_count),
-                use_container_width=True
-            ):
-                next_unrecovered_hour = unrecovered_hours[0]
-                mark_hour_recovered(next_unrecovered_hour["id"])
-                st.rerun()
+            recovered_count = len(recovered_hours)
+            total_count = len(recovery_hours)
 
-        with col_delete:
+            entry_date_display = datetime.fromisoformat(entry["entry_date"]).date()
+            entry_date_label = entry_date_display.strftime("%d.%m.%Y")
+
             if admin_mode:
+                employee_text = f"{entry['employee_name']} ({entry['employee_username']})"
+            else:
+                employee_text = employee_name
+
+            col_info, col_minus, col_status, col_plus, col_delete = st.columns(
+                [3, 0.7, 4, 0.7, 1],
+                vertical_alignment="center"
+            )
+
+            with col_info:
+                desc_text = f" — {entry['description']}" if entry["description"] else ""
+
+                st.markdown(
+                    f"**{employee_text}**  \n"
+                    f"{entry_date_label} | {entry['hours']} ore{desc_text}"
+                )
+
+            with col_minus:
                 if st.button(
-                    "sterge",
-                    key=f"delete_invoire_{entry['id']}",
+                    "-",
+                    key=f"minus_recovery_{entry['id']}",
+                    disabled=(recovered_count == 0),
                     use_container_width=True
                 ):
-                    soft_delete_entry(entry["id"])
+                    last_recovered_hour = recovered_hours[-1]
+                    unmark_hour_recovered(last_recovered_hour["id"])
                     st.rerun()
-            else:
-                st.empty()
 
-    st.divider()
+            with col_status:
+                if recovered_count == total_count:
+                    st.success(f"{entry_date_label} - {recovered_count}/{total_count} recuperate")
+                elif recovered_count == 0:
+                    st.warning(f"{entry_date_label} - {recovered_count}/{total_count} recuperate")
+                else:
+                    st.info(f"{entry_date_label} - {recovered_count}/{total_count} recuperate")
+
+            with col_plus:
+                if st.button(
+                    "+",
+                    key=f"plus_recovery_{entry['id']}",
+                    disabled=(recovered_count == total_count),
+                    use_container_width=True
+                ):
+                    next_unrecovered_hour = unrecovered_hours[0]
+                    mark_hour_recovered(next_unrecovered_hour["id"])
+                    st.rerun()
+
+            with col_delete:
+                if admin_mode:
+                    if st.button(
+                        "sterge",
+                        key=f"delete_invoire_{entry['id']}",
+                        use_container_width=True
+                    ):
+                        soft_delete_entry(entry["id"])
+                        st.rerun()
+                else:
+                    st.empty()
+
+st.divider()
 
 # -----------------------------
 # CONCEDII
 # -----------------------------
 
-    concedii = sorted(
+concedii = sorted(
         [
             entry for entry in month_entries
             if entry["entry_type"] in [
