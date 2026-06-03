@@ -1463,26 +1463,11 @@ if admin_mode:
 def logout_employee():
     st.session_state.logged_username = ""
 
-st.sidebar.markdown("""
-<style>
-div[data-testid="stSidebar"] button[kind="secondary"] {
-    background-color: #b3261e !important;
-    color: white !important;
-    border: 1px solid #b3261e !important;
-}
-
-div[data-testid="stSidebar"] button[kind="secondary"]:hover {
-    background-color: #8c1d18 !important;
-    color: white !important;
-    border: 1px solid #8c1d18 !important;
-}
-</style>
-""", unsafe_allow_html=True)
-
 st.sidebar.button(
-    "Schimbă utilizatorul",
+    "Deconectare",
     on_click=logout_employee,
-    use_container_width=True
+    use_container_width=True,
+    type="primary"
 )
 
 if admin_mode:
